@@ -1,0 +1,4133 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a0d12">
+<meta name="color-scheme" content="dark">
+<title>LLM Radar · лёгкие модели для смартфона</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+
+  :root {
+    --bg: #0a0d12;
+    --bg-soft: #0f141c;
+    --card: #141b24;
+    --card-hi: #1a2330;
+    --line: #223040;
+    --txt: #e8eef7;
+    --muted: #8496ad;
+    --muted-2: #63758c;
+    --cyan: #35d0ff;
+    --violet: #8b5cf6;
+    --fire: #ff7a45;
+    --green: #2ee6a8;
+    --radius: 16px;
+    --tap: rgba(53, 208, 255, .10);
+  }
+
+  html, body { margin: 0; padding: 0; }
+
+  body {
+    background:
+      radial-gradient(900px 420px at 12% -8%, rgba(53, 208, 255, .13), transparent 60%),
+      radial-gradient(760px 380px at 100% 0%, rgba(139, 92, 246, .14), transparent 62%),
+      var(--bg);
+    background-attachment: fixed;
+    color: var(--txt);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 15px;
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+    min-height: 100dvh;
+  }
+
+  .shell {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 0 14px calc(34px + env(safe-area-inset-bottom));
+  }
+
+  /* ---------- header ---------- */
+  .top {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    margin: 0 -14px;
+    padding: calc(10px + env(safe-area-inset-top)) 14px 10px;
+    background: linear-gradient(180deg, rgba(10, 13, 18, .96) 55%, rgba(10, 13, 18, .72));
+    backdrop-filter: blur(14px) saturate(150%);
+    -webkit-backdrop-filter: blur(14px) saturate(150%);
+    border-bottom: 1px solid rgba(34, 48, 64, .9);
+  }
+
+  .top-row { display: flex; align-items: center; gap: 10px; }
+
+  .brand { display: flex; align-items: center; gap: 9px; min-width: 0; }
+
+  .pulse {
+    width: 11px; height: 11px; flex: none; border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 0 0 rgba(46, 230, 168, .65);
+    animation: pulse 2.4s infinite;
+  }
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(46, 230, 168, .55); }
+    70% { box-shadow: 0 0 0 11px rgba(46, 230, 168, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(46, 230, 168, 0); }
+  }
+
+  h1 {
+    margin: 0;
+    font-size: 16.5px;
+    font-weight: 750;
+    letter-spacing: -.2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  h1 span {
+    background: linear-gradient(92deg, var(--cyan), var(--violet));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .sub {
+    margin: 1px 0 0;
+    font-size: 11px;
+    color: var(--muted-2);
+    letter-spacing: .2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .btn-new {
+    margin-left: auto;
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 8px 12px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 122, 69, .55);
+    background: rgba(255, 122, 69, .14);
+    color: #ffb08c;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform .12s ease, background .18s ease;
+  }
+  .btn-new:active { transform: scale(.95); }
+  .btn-new[hidden] { display: none; }
+  @media (max-width: 430px) { .btn-new .lbl { display: none; } }
+  .btn-new .flame { width: 13px; height: 13px; }
+
+  .btn-refresh {
+    flex: none;
+    width: 40px; height: 40px;
+    display: grid; place-items: center;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--card);
+    color: var(--txt);
+    cursor: pointer;
+    transition: transform .12s ease, border-color .18s;
+  }
+  .btn-refresh:active { transform: scale(.92); border-color: var(--cyan); }
+  .btn-refresh svg { width: 19px; height: 19px; }
+  .btn-refresh.spinning svg { animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ---------- controls ---------- */
+  .controls { margin-top: 10px; display: grid; gap: 9px; }
+
+  .search-wrap { position: relative; }
+  .search-wrap svg {
+    position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+    width: 16px; height: 16px; color: var(--muted-2); pointer-events: none;
+  }
+  #q, #appQ {
+    width: 100%;
+    padding: 11px 34px 11px 36px;
+    border-radius: 12px;
+    border: 1px solid var(--line);
+    background: var(--bg-soft);
+    color: var(--txt);
+    font-size: 14px;
+    outline: none;
+    transition: border-color .18s, box-shadow .18s;
+  }
+  #q::placeholder, #appQ::placeholder { color: var(--muted-2); }
+  #q:focus, #appQ:focus { border-color: rgba(53, 208, 255, .6); box-shadow: 0 0 0 3px rgba(53, 208, 255, .12); }
+  .clear-q {
+    position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+    width: 26px; height: 26px; display: grid; place-items: center;
+    border: 0; border-radius: 8px; background: transparent; color: var(--muted);
+    font-size: 17px; line-height: 1; cursor: pointer;
+  }
+  .clear-q[hidden] { display: none; }
+
+  .chips {
+    display: flex; gap: 7px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+    margin: 0 -14px;
+    padding-left: 14px; padding-right: 14px;
+  }
+  .chips::-webkit-scrollbar { display: none; }
+
+  .chip {
+    flex: none;
+    padding: 7px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: var(--card);
+    color: var(--muted);
+    font-size: 12.5px;
+    font-weight: 620;
+    cursor: pointer;
+    transition: all .16s ease;
+    white-space: nowrap;
+  }
+  .chip:active { transform: scale(.95); }
+  .chip[aria-pressed="true"] {
+    color: #061019;
+    border-color: transparent;
+    background: linear-gradient(135deg, var(--cyan), #52b8ff);
+    box-shadow: 0 4px 16px -6px rgba(53, 208, 255, .8);
+  }
+  .chip .n { opacity: .75; font-variant-numeric: tabular-nums; }
+
+  .meta-line {
+    display: grid; gap: 2px;
+    font-size: 11.5px; color: var(--muted-2);
+    padding: 2px 1px 0;
+  }
+  .flame { width: 1em; height: 1em; flex: none; vertical-align: -0.12em; }
+  .meta-line b { color: var(--muted); font-weight: 640; }
+
+  /* ---------- list ---------- */
+  #list { display: grid; gap: 10px; margin-top: 12px; }
+
+  .card {
+    position: relative;
+    display: block;
+    padding: 13px 14px 12px;
+    border-radius: var(--radius);
+    border: 1px solid var(--line);
+    background: linear-gradient(160deg, var(--card-hi), var(--card) 62%);
+    color: inherit;
+    text-decoration: none;
+    overflow: hidden;
+    transition: transform .13s ease, border-color .18s ease, box-shadow .18s ease;
+    animation: rise .28s ease both;
+  }
+  @keyframes rise { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: none; } }
+  .card:active { transform: scale(.984); border-color: rgba(53, 208, 255, .5); }
+
+  .card-link {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    border-radius: inherit;
+  }
+  .card-inner { position: relative; z-index: 2; pointer-events: none; }
+  .card-inner .dl-btn,
+  .card-inner .share-btn { pointer-events: auto; }
+
+  .dl-btn {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 10px;
+    border-radius: 9px;
+    border: 1px solid rgba(46, 230, 168, .38);
+    background: rgba(46, 230, 168, .12);
+    color: #7bf0cd;
+    font-size: 11.5px;
+    font-weight: 720;
+    font-family: inherit;
+    cursor: pointer;
+    transition: transform .12s ease, background .18s ease;
+  }
+  .dl-btn:active { transform: scale(.94); background: rgba(46, 230, 168, .22); }
+  .dl-btn svg { width: 12.5px; height: 12.5px; }
+
+  .card.is-new {
+    border-color: rgba(255, 122, 69, .55);
+    background:
+      linear-gradient(160deg, rgba(255, 122, 69, .10), rgba(255, 122, 69, .02) 60%),
+      linear-gradient(160deg, var(--card-hi), var(--card) 62%);
+    box-shadow: 0 0 0 1px rgba(255, 122, 69, .12), 0 10px 30px -18px rgba(255, 122, 69, .9);
+  }
+
+  .card-head { display: flex; align-items: flex-start; gap: 8px; }
+
+  .size-tag {
+    flex: none;
+    min-width: 40px;
+    text-align: center;
+    padding: 4px 8px;
+    border-radius: 9px;
+    font-size: 11.5px;
+    font-weight: 800;
+    letter-spacing: .3px;
+    color: #061019;
+    background: linear-gradient(135deg, var(--green), #6ff0c8);
+  }
+  .size-tag.mid { background: linear-gradient(135deg, #ffd166, #ffb020); }
+  .size-tag.tag-name { background: linear-gradient(135deg, #b69cff, var(--violet)); color: #fff; }
+
+  .badge-new .flame { width: 11px; height: 11px; }
+  .badge-new {
+    flex: none;
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 9px;
+    border-radius: 999px;
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: .45px;
+    color: #1b0a02;
+    background: linear-gradient(135deg, #ffd06b, var(--fire));
+    box-shadow: 0 0 16px -4px rgba(255, 122, 69, .95);
+    animation: glow 2.1s ease-in-out infinite;
+  }
+  @keyframes glow {
+    0%, 100% { box-shadow: 0 0 14px -5px rgba(255, 122, 69, .85); }
+    50% { box-shadow: 0 0 22px -2px rgba(255, 122, 69, 1); }
+  }
+
+  .name {
+    margin: 9px 0 0;
+    font-size: 14.5px;
+    font-weight: 680;
+    letter-spacing: -.15px;
+    line-height: 1.33;
+    word-break: break-word;
+  }
+  .name .author { color: var(--muted-2); font-weight: 600; }
+
+  .tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 9px; }
+  .tag {
+    padding: 3px 7px;
+    border-radius: 7px;
+    font-size: 10.5px;
+    font-weight: 650;
+    letter-spacing: .2px;
+    color: #9fd6ff;
+    background: rgba(53, 208, 255, .10);
+    border: 1px solid rgba(53, 208, 255, .18);
+  }
+  .tag.kw { color: #ffb08c; background: rgba(255, 122, 69, .10); border-color: rgba(255, 122, 69, .22); }
+  .tag.src { color: #c7b6ff; background: rgba(139, 92, 246, .12); border-color: rgba(139, 92, 246, .24); }
+  .tag.gated { color: #ffd479; background: rgba(255, 196, 84, .1); border-color: rgba(255, 196, 84, .22); }
+
+  .foot {
+    display: flex; align-items: center; gap: 9px; flex-wrap: wrap; row-gap: 6px;
+    margin-top: 10px;
+    font-size: 11.5px;
+    color: var(--muted-2);
+    font-variant-numeric: tabular-nums;
+  }
+  .foot .ico { display: inline-flex; align-items: center; gap: 3.5px; }
+  .foot svg { width: 12px; height: 12px; opacity: .8; }
+  .foot .go { color: var(--cyan); font-weight: 680; display: inline-flex; align-items: center; gap: 3px; }
+  .foot .go svg { width: 13px; height: 13px; opacity: 1; }
+  @media (max-width: 400px) {
+    .foot { gap: 8px; }
+    .foot .go-lbl { display: none; }
+    .dl-btn { padding: 6px 9px; }
+  }
+
+  /* ---------- states ---------- */
+  .skeleton {
+    height: 92px;
+    border-radius: var(--radius);
+    border: 1px solid var(--line);
+    background: linear-gradient(100deg, var(--card) 30%, var(--card-hi) 50%, var(--card) 70%);
+    background-size: 220% 100%;
+    animation: shimmer 1.25s infinite linear;
+  }
+  @keyframes shimmer { from { background-position: 130% 0; } to { background-position: -30% 0; } }
+
+  .state {
+    margin-top: 12px;
+    padding: 22px 18px;
+    border-radius: var(--radius);
+    border: 1px dashed var(--line);
+    background: rgba(15, 20, 28, .6);
+    text-align: center;
+    color: var(--muted);
+    font-size: 13.5px;
+  }
+  .state .i-big { width: 34px; height: 34px; margin: 0 auto 10px; display: block; color: var(--muted-2); }
+  .dropped-body .i-sm, details.dropped .i-sm { width: 13px; height: 13px; vertical-align: -2px; }
+  .state h3 { margin: 0 0 6px; font-size: 15px; color: var(--txt); }
+  .state p { margin: 0; line-height: 1.5; }
+  .state code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12px;
+    background: rgba(53, 208, 255, .1);
+    padding: 1px 5px;
+    border-radius: 5px;
+    color: #9fd6ff;
+  }
+  .state .retry {
+    margin-top: 14px;
+    padding: 10px 18px;
+    border-radius: 11px;
+    border: 0;
+    background: linear-gradient(135deg, var(--cyan), var(--violet));
+    color: #05121a;
+    font-size: 13.5px;
+    font-weight: 750;
+    cursor: pointer;
+  }
+
+  /* ---------- dropped / details ---------- */
+  details.dropped {
+    margin-top: 16px;
+    border-radius: 12px;
+    border: 1px solid var(--line);
+    background: rgba(15, 20, 28, .55);
+    overflow: hidden;
+  }
+  details.dropped summary {
+    padding: 11px 13px;
+    font-size: 12.5px;
+    color: var(--muted);
+    cursor: pointer;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+  details.dropped summary::-webkit-details-marker { display: none; }
+  details.dropped summary::after { content: "▾"; margin-left: auto; color: var(--muted-2); transition: transform .2s; }
+  details.dropped[open] summary::after { transform: rotate(180deg); }
+  .dropped-body {
+    padding: 0 13px 12px;
+    max-height: 240px;
+    overflow: auto;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px;
+    line-height: 1.65;
+    color: var(--muted-2);
+  }
+  .dropped-body div {
+    padding: 2px 0;
+    border-bottom: 1px solid rgba(34, 48, 64, .55);
+    word-break: break-all;
+  }
+  .dropped-body div:last-child { border-bottom: 0; }
+  .dropped-body em { color: #7d6a6a; font-style: normal; }
+
+  footer.pg {
+    margin-top: 20px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(34, 48, 64, .8);
+    font-size: 11px;
+    line-height: 1.6;
+    color: var(--muted-2);
+  }
+  footer.pg b { color: var(--muted); }
+  footer.pg a { color: #7fc4e8; text-decoration: none; }
+  .save-app {
+    margin-top: 10px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    background: rgba(255, 255, 255, .04);
+    color: var(--muted);
+    font-family: inherit;
+    font-size: 11.5px;
+    font-weight: 650;
+    cursor: pointer;
+  }
+  .save-app:active { background: rgba(53, 208, 255, .12); color: var(--cyan); }
+  .save-app svg { width: 13px; height: 13px; }
+
+  /* ---------- modal ---------- */
+  .overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding: 10px;
+    background: rgba(4, 7, 11, .74);
+    backdrop-filter: blur(7px);
+    -webkit-backdrop-filter: blur(7px);
+    animation: fade .22s ease both;
+  }
+  @media (min-width: 520px) { .overlay { align-items: center; } }
+  .overlay[hidden] { display: none; }
+  @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+
+  .modal {
+    width: 100%;
+    max-width: 460px;
+    max-height: 84dvh;
+    display: flex;
+    flex-direction: column;
+    border-radius: 22px;
+    border: 1px solid rgba(255, 122, 69, .3);
+    background: linear-gradient(175deg, #1b232f, #10161e 70%);
+    box-shadow: 0 -12px 60px -20px rgba(255, 122, 69, .55), 0 24px 70px -30px #000;
+    animation: sheet .3s cubic-bezier(.22, 1, .36, 1) both;
+    overflow: hidden;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  @keyframes sheet { from { transform: translateY(28px) scale(.97); opacity: 0; } to { transform: none; opacity: 1; } }
+
+  .modal-top {
+    padding: 20px 18px 12px;
+    text-align: center;
+    position: relative;
+  }
+  .modal-top::before {
+    content: "";
+    position: absolute; inset: 0 0 auto;
+    height: 90px;
+    background: radial-gradient(160px 70px at 50% 0%, rgba(255, 122, 69, .28), transparent 75%);
+    pointer-events: none;
+  }
+  .modal-emoji { display: grid; place-items: center; height: 38px; }
+  .modal-emoji .flame { width: 38px; height: 38px; color: var(--fire); filter: drop-shadow(0 6px 18px rgba(255,122,69,.55)); }
+  .modal h2 {
+    margin: 8px 0 4px;
+    font-size: 18px;
+    letter-spacing: -.3px;
+  }
+  .modal h2 em { font-style: normal; color: var(--fire); }
+  .modal p.sub2 { margin: 0; font-size: 12.5px; color: var(--muted); }
+
+  .modal-list {
+    overflow: auto;
+    padding: 4px 12px 12px;
+    display: grid;
+    gap: 7px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .m-item {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 10px 11px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 122, 69, .22);
+    background: rgba(255, 122, 69, .06);
+    color: inherit;
+    text-decoration: none;
+    font-size: 12.5px;
+    transition: background .16s, transform .12s;
+  }
+  .m-item:active { transform: scale(.98); background: rgba(255, 122, 69, .13); }
+  .m-item .m-name { min-width: 0; }
+  .m-item .m-name b { display: block; font-weight: 650; word-break: break-word; }
+  .m-item .m-name small { color: var(--muted-2); font-size: 10.5px; }
+  .m-item .m-size {
+    margin-left: auto; flex: none;
+    font-size: 10.5px; font-weight: 800; color: #061019;
+    background: linear-gradient(135deg, var(--green), #6ff0c8);
+    padding: 3px 7px; border-radius: 7px;
+  }
+  .m-section {
+    padding: 9px 3px 1px;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .8px;
+    color: var(--muted-2);
+  }
+  .m-section:first-child { padding-top: 2px; }
+  .m-item-upd { border-color: rgba(53, 208, 255, .26); background: rgba(53, 208, 255, .06); }
+  .m-item-upd:active { background: rgba(53, 208, 255, .12); }
+  .m-more { text-align: center; font-size: 11.5px; color: var(--muted-2); padding: 6px 0 2px; }
+
+  .modal-actions { padding: 10px 12px 14px; display: grid; gap: 8px; }
+  .modal-actions button {
+    padding: 13px;
+    border-radius: 13px;
+    border: 0;
+    font-size: 14px;
+    font-weight: 750;
+    cursor: pointer;
+    transition: transform .12s;
+  }
+  .modal-actions button:active { transform: scale(.98); }
+  .m-primary { background: linear-gradient(135deg, var(--cyan), var(--violet)); color: #05121a; }
+  .m-ghost { background: rgba(255, 255, 255, .06); color: var(--muted); border: 1px solid var(--line); }
+
+  /* ---------- download sheet ---------- */
+  .dl-modal {
+    border-color: rgba(46, 230, 168, .3);
+    background: linear-gradient(175deg, #1a2530, #0f161e 70%);
+    box-shadow: 0 -12px 60px -20px rgba(46, 230, 168, .45), 0 24px 70px -30px #000;
+    max-height: 88dvh;
+  }
+  .dl-head { padding: 16px 16px 10px; position: relative; }
+  .dl-head::before {
+    content: "";
+    position: absolute; inset: 0 0 auto;
+    height: 80px;
+    background: radial-gradient(160px 60px at 30% 0%, rgba(46, 230, 168, .22), transparent 75%);
+    pointer-events: none;
+  }
+  .dl-title-row { display: flex; align-items: flex-start; gap: 10px; }
+  .dl-head h2 { margin: 0; font-size: 16px; letter-spacing: -.25px; word-break: break-word; }
+  .dl-x {
+    flex: none;
+    margin-left: auto;
+    width: 32px; height: 32px;
+    display: grid; place-items: center;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    background: rgba(255, 255, 255, .04);
+    color: var(--muted);
+    cursor: pointer;
+  }
+  .dl-x svg { width: 15px; height: 15px; }
+  .dl-hint {
+    margin: 8px 0 0;
+    padding: 8px 10px;
+    border-radius: 10px;
+    background: rgba(46, 230, 168, .08);
+    border: 1px solid rgba(46, 230, 168, .18);
+    font-size: 11.5px;
+    line-height: 1.45;
+    color: #8fe6cc;
+  }
+  .dl-hint b { color: #b7f6e4; font-weight: 700; }
+
+  /* внутри окна скачивания — обычный поток: грид-строки сжимались по высоте */
+  .dl-modal .modal-list { display: block; flex: 1 1 auto; min-height: 0; }
+  .dl-modal .modal-list > * + * { margin-top: 7px; }
+
+  .f-row {
+    display: flex;
+    align-items: stretch;
+    gap: 7px;
+    border-radius: 12px;
+    border: 1px solid var(--line);
+    background: rgba(255, 255, 255, .025);
+    overflow: hidden;
+  }
+  .f-row.rec {
+    border-color: rgba(46, 230, 168, .45);
+    background: rgba(46, 230, 168, .07);
+  }
+  .f-main {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 10px 11px;
+    color: inherit;
+    text-decoration: none;
+  }
+  .f-main:active { background: rgba(46, 230, 168, .1); }
+  .f-txt { display: block; min-width: 0; }
+  .f-name {
+    display: block;
+    font-size: 12px;
+    font-weight: 620;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: #dbe7f4;
+  }
+  .f-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 2px; font-size: 10.5px; color: var(--muted-2); }
+  .f-quant { white-space: nowrap;
+    font-weight: 800;
+    font-size: 9.5px;
+    letter-spacing: .3px;
+    padding: 1px 5px;
+    border-radius: 5px;
+    color: #9fd6ff;
+    background: rgba(53, 208, 255, .12);
+    border: 1px solid rgba(53, 208, 255, .2);
+  }
+  .f-quant.rec { color: #061019; background: linear-gradient(135deg, var(--green), #6ff0c8); border-color: transparent; }
+  .f-size { font-variant-numeric: tabular-nums; }
+  .f-go { flex: none; display: grid; place-items: center; width: 34px; color: var(--green); }
+  .f-go svg { width: 16px; height: 16px; }
+  .f-copy {
+    flex: none;
+    width: 38px;
+    display: grid; place-items: center;
+    border: 0;
+    border-left: 1px solid var(--line);
+    background: rgba(255, 255, 255, .03);
+    color: var(--muted);
+    cursor: pointer;
+  }
+  .f-copy:active { background: rgba(53, 208, 255, .14); color: var(--cyan); }
+  .f-copy svg { width: 14px; height: 14px; }
+  .f-note { padding: 10px 2px 2px; font-size: 11px; color: var(--muted-2); line-height: 1.5; }
+  .dl-page {
+    display: block;
+    text-align: center;
+    padding: 12px;
+    border-radius: 13px;
+    border: 1px solid var(--line);
+    background: rgba(255, 255, 255, .05);
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .dl-loading { display: grid; gap: 7px; padding: 4px 0; }
+
+  /* ---------- настройки и фильтр по размеру ---------- */
+  .btn-gear {
+    flex: none;
+    width: 40px; height: 40px;
+    display: grid; place-items: center;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--card);
+    color: var(--txt);
+    cursor: pointer;
+    transition: transform .12s ease, border-color .18s;
+  }
+  .btn-gear:active { transform: scale(.92); border-color: var(--cyan); }
+  .btn-gear svg { width: 19px; height: 19px; }
+
+  .chip.has-val { color: #0b1218; border-color: transparent; background: linear-gradient(135deg, #ffd166, #ffb020); }
+  .chip.chip-size { display: inline-flex; align-items: center; gap: 5px; }
+  .chip.chip-size svg { width: 13px; height: 13px; opacity: .85; }
+
+  .badge-upd {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 9px;
+    border-radius: 999px;
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: .4px;
+    color: #04222b;
+    background: linear-gradient(135deg, #8ef0ff, var(--cyan));
+    box-shadow: 0 0 14px -5px rgba(53, 208, 255, .95);
+  }
+  .badge-upd svg { width: 11px; height: 11px; }
+  .card.is-upd {
+    border-color: rgba(53, 208, 255, .5);
+    box-shadow: 0 0 0 1px rgba(53, 208, 255, .1), 0 10px 30px -20px rgba(53, 208, 255, .9);
+  }
+
+  .set-body { overflow: auto; padding: 2px 14px 18px; flex: 1 1 auto; min-height: 0; -webkit-overflow-scrolling: touch; }
+  .set-section { padding: 12px 0; border-bottom: 1px solid rgba(34, 48, 64, .7); }
+  .set-section:last-child { border-bottom: 0; }
+  .set-label {
+    display: flex; align-items: center; gap: 6px;
+    margin: 0 0 8px;
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: .5px;
+    text-transform: uppercase;
+    color: var(--muted-2);
+  }
+  .set-label .hint { text-transform: none; letter-spacing: 0; font-weight: 500; color: var(--muted-2); opacity: .8; }
+  .tag-list { display: flex; flex-wrap: wrap; gap: 6px; }
+  .tag-edit {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 6px 8px 6px 10px;
+    border-radius: 9px;
+    border: 1px solid rgba(53, 208, 255, .28);
+    background: rgba(53, 208, 255, .08);
+    color: #a9dcf7;
+    font-size: 12px;
+    font-weight: 620;
+  }
+  .tag-edit button {
+    display: grid; place-items: center;
+    width: 16px; height: 16px;
+    border: 0; border-radius: 5px;
+    background: rgba(255, 255, 255, .08);
+    color: #cfe6f5;
+    font-size: 12px; line-height: 1;
+    cursor: pointer;
+  }
+  .tag-edit button:active { background: rgba(255, 122, 69, .5); }
+  .tag-edit.kw { border-color: rgba(255, 122, 69, .28); background: rgba(255, 122, 69, .08); color: #ffc4a8; }
+  .tag-edit.size { border-color: var(--line); background: rgba(255, 255, 255, .04); color: var(--muted); }
+
+  .set-add { display: flex; gap: 7px; margin-top: 9px; }
+  .set-add input {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 9px 11px;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    background: var(--bg-soft);
+    color: var(--txt);
+    font-family: inherit;
+    font-size: 13px;
+    outline: none;
+  }
+  .set-add input:focus { border-color: rgba(53, 208, 255, .55); }
+  .set-add input::placeholder { color: var(--muted-2); }
+  .set-add button {
+    flex: none;
+    padding: 0 14px;
+    border-radius: 10px;
+    border: 0;
+    background: linear-gradient(135deg, var(--cyan), #52b8ff);
+    color: #05121a;
+    font-family: inherit;
+    font-size: 16px;
+    font-weight: 800;
+    cursor: pointer;
+  }
+  .set-add button:active { transform: scale(.96); }
+
+  .size-opts { display: flex; flex-wrap: wrap; gap: 6px; }
+  .size-opt {
+    padding: 7px 11px;
+    border-radius: 9px;
+    border: 1px solid var(--line);
+    background: rgba(255, 255, 255, .03);
+    color: var(--muted);
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all .14s;
+  }
+  .size-opt:active { transform: scale(.95); }
+  .size-opt.on {
+    color: #061019;
+    border-color: transparent;
+    background: linear-gradient(135deg, var(--green), #6ff0c8);
+  }
+  .presets { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
+  .preset {
+    padding: 6px 10px;
+    border-radius: 8px;
+    border: 1px dashed var(--line);
+    background: transparent;
+    color: var(--muted);
+    font-family: inherit;
+    font-size: 11.5px;
+    font-weight: 620;
+    cursor: pointer;
+  }
+  .preset:active { border-color: var(--cyan); color: var(--cyan); }
+
+  .switch-row {
+    display: flex; align-items: flex-start; gap: 10px;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--txt);
+    line-height: 1.4;
+  }
+  .switch-row input { margin: 2px 0 0; width: 17px; height: 17px; accent-color: #35d0ff; flex: none; }
+  .switch-row small { display: block; color: var(--muted-2); font-size: 11.5px; margin-top: 2px; }
+
+  .set-actions {
+    padding: 10px 12px calc(14px + env(safe-area-inset-bottom));
+    display: grid;
+    gap: 8px;
+    border-top: 1px solid rgba(34, 48, 64, .9);
+    background: linear-gradient(180deg, rgba(15, 22, 30, .55), #0f161e);
+  }
+  .set-actions .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .set-actions button {
+    padding: 12px;
+    border-radius: 12px;
+    border: 1px solid var(--line);
+    background: rgba(255, 255, 255, .05);
+    color: var(--txt);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform .12s;
+  }
+  .set-actions button:active { transform: scale(.98); }
+  .set-actions .primary {
+    border: 0;
+    background: linear-gradient(135deg, var(--cyan), var(--violet));
+    color: #05121a;
+    font-size: 14px;
+  }
+  .set-note { font-size: 11px; color: var(--muted-2); text-align: center; padding: 0 4px; }
+
+  /* ---------- поделиться ---------- */
+  .share-btn {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px; height: 30px;
+    margin-left: -2px;
+    border-radius: 9px;
+    border: 1px solid rgba(53, 208, 255, .32);
+    background: rgba(53, 208, 255, .1);
+    color: #9fd6ff;
+    cursor: pointer;
+    transition: transform .12s ease, background .18s ease;
+  }
+  .share-btn:active { transform: scale(.92); background: rgba(53, 208, 255, .22); }
+  .share-btn svg { width: 15px; height: 15px; }
+
+  .sh-modal { border-color: rgba(139, 92, 246, .32); }
+  .sh-modal .dl-head::before { background: radial-gradient(160px 60px at 30% 0%, rgba(139, 92, 246, .26), transparent 75%); }
+
+  .sh-tabs { display: flex; gap: 6px; padding: 0 14px 10px; }
+  .sh-tab {
+    flex: 1 1 0;
+    padding: 8px 10px;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    background: rgba(255, 255, 255, .03);
+    color: var(--muted);
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all .15s;
+  }
+  .sh-tab[aria-pressed="true"] {
+    color: #061019;
+    border-color: transparent;
+    background: linear-gradient(135deg, var(--cyan), var(--violet));
+  }
+  .sh-preview {
+    margin: 0 14px 12px;
+    padding: 12px;
+    border-radius: 12px;
+    border: 1px solid var(--line);
+    background: #0b1219;
+    color: #cfe0f0;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11.5px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 34dvh;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .sh-actions { padding: 0 12px 14px; display: grid; gap: 8px; }
+  .sh-actions .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .sh-actions button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    padding: 12px;
+    border-radius: 12px;
+    border: 1px solid var(--line);
+    background: rgba(255, 255, 255, .05);
+    color: var(--txt);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform .12s;
+  }
+  .sh-actions button:active { transform: scale(.98); }
+  .sh-actions button svg { width: 15px; height: 15px; flex: none; }
+  .sh-actions .sh-main {
+    border: 0;
+    background: linear-gradient(135deg, var(--cyan), var(--violet));
+    color: #05121a;
+    font-size: 14px;
+  }
+  .sh-actions .sh-tg { border-color: rgba(53, 208, 255, .35); background: rgba(53, 208, 255, .1); color: #9fd6ff; }
+  .sh-actions .sh-tg svg { color: #6fc7f5; }
+
+  /* ---------- избранное / оценка размера / сортировка ---------- */
+  .fav-btn {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px; height: 30px;
+    border-radius: 9px;
+    border: 1px solid var(--line);
+    background: rgba(255, 255, 255, .04);
+    color: var(--muted);
+    cursor: pointer;
+    transition: transform .12s ease, background .18s ease, color .18s;
+  }
+  .fav-btn svg { width: 15px; height: 15px; }
+  .fav-btn:active { transform: scale(.92); }
+  .fav-btn.on {
+    color: #ffd166;
+    border-color: rgba(255, 209, 102, .5);
+    background: rgba(255, 209, 102, .14);
+  }
+  .card-inner .fav-btn { pointer-events: auto; }
+
+  .est-tag {
+    flex: none;
+    padding: 4px 7px;
+    border-radius: 9px;
+    font-size: 10.5px;
+    font-weight: 750;
+    letter-spacing: .2px;
+    font-variant-numeric: tabular-nums;
+    color: #9fe8cf;
+    background: rgba(46, 230, 168, .1);
+    border: 1px solid rgba(46, 230, 168, .22);
+  }
+  .est-tag.tight {
+    color: #ffc98a;
+    background: rgba(255, 154, 69, .1);
+    border-color: rgba(255, 154, 69, .26);
+  }
+  .est-tag.exact { border-style: solid; }
+
+  .tag.origin { color: #b7f6e4; background: rgba(46, 230, 168, .1); border-color: rgba(46, 230, 168, .24); }
+  .tag.fav-note { color: #ffd166; background: rgba(255, 209, 102, .1); border-color: rgba(255, 209, 102, .24); }
+  .chip.chip-star svg { width: 13px; height: 13px; }
+  .top-tag {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 4px 8px;
+    border-radius: 9px;
+    font-size: 10.5px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    color: #1b1203;
+    background: linear-gradient(135deg, #ffe08a, #ffb020);
+    box-shadow: 0 0 14px -6px rgba(255, 176, 32, .9);
+  }
+  .top-tag svg { width: 11px; height: 11px; }
+  .chip.chip-top { display: inline-flex; align-items: center; gap: 5px; }
+  .chip.chip-top[aria-pressed="true"] {
+    color: #1b1203;
+    border-color: transparent;
+    background: linear-gradient(135deg, #ffe08a, #ffb020);
+    box-shadow: 0 4px 16px -6px rgba(255, 176, 32, .85);
+  }
+  .chip.chip-sort { display: inline-flex; align-items: center; gap: 5px; }
+  .chip.chip-sort svg { width: 13px; height: 13px; opacity: .85; }
+
+  .sort-opt {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 12px;
+    border-radius: 12px;
+    border: 1px solid var(--line);
+    background: rgba(255, 255, 255, .03);
+    color: var(--txt);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 650;
+    text-align: left;
+    cursor: pointer;
+    transition: all .14s;
+  }
+  .sort-opt + .sort-opt { margin-top: 7px; }
+  .sort-opt:active { transform: scale(.99); }
+  .sort-opt .s-ico { flex: none; display: grid; place-items: center; width: 22px; color: var(--muted); }
+  .sort-opt .s-ico svg { width: 16px; height: 16px; }
+  .sort-opt small { display: block; font-weight: 500; font-size: 11px; color: var(--muted-2); margin-top: 2px; }
+  .sort-opt.on {
+    border-color: rgba(53, 208, 255, .55);
+    background: rgba(53, 208, 255, .1);
+  }
+  .sort-opt.on .s-ico { color: var(--cyan); }
+
+  .fav-actions { margin: 12px 0 0; }
+  .fav-clear {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 122, 69, .35);
+    background: rgba(255, 122, 69, .1);
+    color: #ffb08c;
+    font-family: inherit;
+    font-size: 11.5px;
+    font-weight: 650;
+    cursor: pointer;
+  }
+  .fav-clear:active { transform: scale(.97); }
+
+  /* ---------- раздел «Оболочки» ---------- */
+  .view-tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+    padding: 3px;
+    margin-top: 10px;
+    border-radius: 12px;
+    border: 1px solid var(--line);
+    background: rgba(10, 14, 20, .6);
+  }
+  .view-tabs button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 10px;
+    border: 0;
+    border-radius: 9px;
+    background: transparent;
+    color: var(--muted);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all .16s;
+  }
+  .view-tabs button svg { width: 14px; height: 14px; opacity: .85; }
+  .view-tabs button[aria-pressed="true"] {
+    color: #061019;
+    background: linear-gradient(135deg, var(--cyan), #52b8ff);
+    box-shadow: 0 4px 14px -8px rgba(53, 208, 255, .9);
+  }
+  .view-tabs .n {
+    font-size: 10.5px;
+    font-weight: 800;
+    opacity: .8;
+  }
+  .view-tabs button[aria-pressed="true"] .n { opacity: .95; }
+
+  .apps-bar { display: grid; gap: 9px; margin-top: 10px; }
+  .apps-bar[hidden], #modelsBar[hidden] { display: none; }
+
+  .app-card {
+    position: relative;
+    display: block;
+    padding: 13px 14px 12px;
+    border-radius: var(--radius);
+    border: 1px solid var(--line);
+    background: linear-gradient(160deg, var(--card-hi), var(--card) 62%);
+    animation: rise .28s ease both;
+  }
+  .app-card.pick { border-color: rgba(46, 230, 168, .45); box-shadow: 0 0 0 1px rgba(46, 230, 168, .1); }
+  .app-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .app-name { margin: 0; font-size: 15px; font-weight: 700; letter-spacing: -.2px; }
+  .app-by { font-size: 11.5px; color: var(--muted-2); font-weight: 600; }
+  .app-note { margin: 8px 0 0; font-size: 12px; line-height: 1.45; color: var(--muted); }
+  .app-meta {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    margin-top: 9px;
+    font-size: 11px;
+    color: var(--muted-2);
+    font-variant-numeric: tabular-nums;
+  }
+  .app-meta .ico { display: inline-flex; align-items: center; gap: 3px; }
+  .app-meta svg { width: 12px; height: 12px; opacity: .8; }
+  .app-actions { display: flex; gap: 7px; margin-top: 11px; }
+  .app-actions a, .app-actions button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    flex: 1 1 0;
+    padding: 10px;
+    border-radius: 11px;
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 720;
+    text-decoration: none;
+    cursor: pointer;
+  }
+  .app-actions .get {
+    border: 1px solid rgba(46, 230, 168, .4);
+    background: rgba(46, 230, 168, .13);
+    color: #7bf0cd;
+  }
+  .app-actions .get:active { background: rgba(46, 230, 168, .22); }
+  .app-actions .gh {
+    border: 1px solid var(--line);
+    background: rgba(255, 255, 255, .04);
+    color: var(--muted);
+  }
+  .app-actions svg { width: 15px; height: 15px; flex: none; }
+  .app-actions .gh svg { width: 14px; height: 14px; }
+  .app-actions .get { white-space: nowrap; }
+  .app-actions .get .sz { opacity: .72; font-weight: 600; }
+  .app-actions .get[data-none="1"] { border-color: var(--line); background: rgba(255, 255, 255, .04); color: var(--muted-2); }
+
+  .plat {
+    padding: 3px 7px;
+    border-radius: 7px;
+    font-size: 10px;
+    font-weight: 750;
+    letter-spacing: .3px;
+    text-transform: uppercase;
+    color: #9fd6ff;
+    background: rgba(53, 208, 255, .1);
+    border: 1px solid rgba(53, 208, 255, .22);
+  }
+  .plat.ios { color: #d9c6ff; background: rgba(139, 92, 246, .12); border-color: rgba(139, 92, 246, .26); }
+  .plat.lib { color: #ffd479; background: rgba(255, 196, 84, .1); border-color: rgba(255, 196, 84, .24); }
+  .plat.apk { color: #061019; background: linear-gradient(135deg, var(--green), #6ff0c8); border-color: transparent; }
+
+  .formats { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 8px; }
+  .fmt {
+    padding: 3px 7px;
+    border-radius: 7px;
+    font-size: 10.5px;
+    font-weight: 650;
+    color: #ffb08c;
+    background: rgba(255, 122, 69, .1);
+    border: 1px solid rgba(255, 122, 69, .22);
+  }
+  .add-repo { display: flex; gap: 7px; margin-top: 4px; }
+  .add-repo input {
+    flex: 1 1 auto; min-width: 0;
+    padding: 10px 11px;
+    border-radius: 11px;
+    border: 1px solid var(--line);
+    background: var(--bg-soft);
+    color: var(--txt);
+    font-family: inherit;
+    font-size: 13px;
+    outline: none;
+  }
+  .add-repo input:focus { border-color: rgba(53, 208, 255, .55); }
+  .add-repo button {
+    flex: none;
+    padding: 0 14px;
+    border-radius: 11px;
+    border: 0;
+    background: linear-gradient(135deg, var(--cyan), #52b8ff);
+    color: #05121a;
+    font-family: inherit;
+    font-size: 16px;
+    font-weight: 800;
+    cursor: pointer;
+  }
+  .assets-note { padding: 0 14px 10px; font-size: 11px; color: var(--muted-2); line-height: 1.5; }
+
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: calc(18px + env(safe-area-inset-bottom));
+    transform: translate(-50%, 12px);
+    z-index: 120;
+    padding: 10px 16px;
+    border-radius: 999px;
+    background: rgba(20, 27, 36, .96);
+    border: 1px solid var(--line);
+    color: var(--txt);
+    font-size: 12.5px;
+    font-weight: 620;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .22s, transform .22s;
+    box-shadow: 0 12px 34px -14px #000;
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <header class="top">
+    <div class="top-row">
+      <div class="brand">
+        <div class="pulse" aria-hidden="true"></div>
+        <div style="min-width:0">
+          <h1>LLM <span>Radar</span></h1>
+          <p class="sub" id="brandSub">Snapdragon 8 Elite · 12 ГБ · только лёгкие</p>
+        </div>
+      </div>
+      <button class="btn-new" id="btnNew" hidden><svg class="flame" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 23a7 7 0 0 0 7-7c0-5-4-6.5-4-11 0 0-1.5 2-1.5 4.5 0 1.2-.6 2-1.5 2.5C10.5 9 10 6 10 6c-2 2-5 5.5-5 10a7 7 0 0 0 7 7Z"/></svg><span id="btnNewCount">0</span><span class="lbl"> новых</span></button>
+      <button class="btn-gear" id="btnSettings" aria-label="Настройки и бэкап">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3.2"/>
+          <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.03 1.56V21a2 2 0 1 1-4 0v-.09A1.7 1.7 0 0 0 8.9 19.3a1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.7 15a1.7 1.7 0 0 0-1.56-1.03H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.7 8.9a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.7a1.7 1.7 0 0 0 1-1.56V3a2 2 0 1 1 4 0v.09A1.7 1.7 0 0 0 15.1 4.7a1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9v.09a1.7 1.7 0 0 0 1.56 1.03H21a2 2 0 1 1 0 4h-.09A1.7 1.7 0 0 0 19.4 15Z"/>
+        </svg>
+      </button>
+      <button class="btn-refresh" id="btnRefresh" aria-label="Обновить">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="view-tabs" id="viewTabs" role="tablist">
+      <button type="button" data-view="models" aria-pressed="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h10"/></svg>
+        Модели
+      </button>
+      <button type="button" data-view="apps" aria-pressed="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="7" height="7" rx="2"/><rect x="13" y="13" width="7" height="7" rx="2"/></svg>
+        Оболочки <span class="n" id="cntApps">0</span>
+      </button>
+    </div>
+
+    <div class="controls" id="modelsBar">
+      <div class="search-wrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+          <circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/>
+        </svg>
+        <input id="q" type="search" inputmode="search" autocomplete="off" spellcheck="false"
+               placeholder="Поиск: qwen, gemma, uncensored…">
+        <button class="clear-q" id="clearQ" hidden aria-label="Очистить">×</button>
+      </div>
+
+      <div class="chips" id="chips" role="group" aria-label="Фильтры">
+        <button class="chip" data-filter="all" aria-pressed="true">Все</button>
+        <button class="chip" data-filter="new" aria-pressed="false"><svg class="flame" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 23a7 7 0 0 0 7-7c0-5-4-6.5-4-11 0 0-1.5 2-1.5 4.5 0 1.2-.6 2-1.5 2.5C10.5 9 10 6 10 6c-2 2-5 5.5-5 10a7 7 0 0 0 7 7Z"/></svg> Новое <span class="n" id="cntNew">0</span></button>
+        <button class="chip" data-filter="llm" aria-pressed="false">LLM</button>
+        <button class="chip" data-filter="updated" aria-pressed="false"><svg class="flame" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 12a8.5 8.5 0 1 0 3-6.5"/><path d="M3 4v5h5"/></svg> Обновлено <span class="n" id="cntUpd">0</span></button>
+        <button class="chip chip-star" data-filter="fav" aria-pressed="false"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.6l2.9 5.9 6.5.95-4.7 4.6 1.1 6.45L12 17.45 6.2 20.5l1.1-6.45-4.7-4.6 6.5-.95Z"/></svg> Избранное <span class="n" id="cntFav">0</span></button>
+        <button class="chip chip-size" id="sizeChip" aria-pressed="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8h18v8H3z"/><path d="M7 8v3M11 8v4M15 8v3M19 8v4"/></svg>
+          <span id="sizeChipLabel">все размеры</span>
+        </button>
+        <button class="chip" data-filter="gguf" aria-pressed="false">GGUF</button>
+        <button class="chip" data-filter="litert" aria-pressed="false">LiteRT</button>
+        <button class="chip" data-filter="abliterated" aria-pressed="false">Abliterated</button>
+        <button class="chip" data-filter="uncensored" aria-pressed="false">Uncensored</button>
+        <button class="chip chip-top" id="topChip" aria-pressed="false"><svg class="flame" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4h10v5a5 5 0 0 1-10 0V4Z"/><path d="M7 5H4.5v2A3.5 3.5 0 0 0 8 10.5"/><path d="M17 5h2.5v2A3.5 3.5 0 0 1 16 10.5"/><path d="M12 14v4"/><path d="M8.5 20h7"/></svg> ТОП</button>
+        <button class="chip chip-sort" id="sortChip" aria-pressed="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4v16M7 4 4 7M7 4l3 3"/><path d="M17 20V4M17 20l3-3M17 20l-3-3"/></svg>
+          <span id="sortChipLabel">сортировка</span>
+        </button>
+      </div>
+
+      <div class="meta-line">
+        <span id="statusText">Готов к запуску…</span>
+        <span id="prevRun">прошлый запуск: —</span>
+      </div>
+    </div>
+
+    <div class="apps-bar" id="appsBar" hidden>
+      <div class="search-wrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+          <circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/>
+        </svg>
+        <input id="appQ" type="search" inputmode="search" autocomplete="off" spellcheck="false"
+               placeholder="Поиск оболочки: pocketpal, maid, chat…">
+      </div>
+      <div class="chips" id="appChips" role="group" aria-label="Фильтры оболочек">
+        <button class="chip" data-appfilter="all" aria-pressed="true">Все</button>
+        <button class="chip" data-appfilter="android" aria-pressed="false">Android</button>
+        <button class="chip" data-appfilter="ios" aria-pressed="false">iOS</button>
+        <button class="chip" data-appfilter="apk" aria-pressed="false">С APK</button>
+        <button class="chip" data-appfilter="litert" aria-pressed="false">LiteRT</button>
+        <button class="chip" data-appfilter="gguf" aria-pressed="false">GGUF</button>
+      </div>
+      <div class="add-repo">
+        <input id="addRepo" placeholder="Свой репозиторий: owner/repo" autocomplete="off" autocapitalize="off" spellcheck="false">
+        <button type="button" id="addRepoBtn" aria-label="Добавить репозиторий">＋</button>
+      </div>
+      <div class="meta-line"><span id="appsStatus">Оболочки для запуска моделей на телефоне</span></div>
+    </div>
+  </header>
+
+  <main>
+    <div id="list"></div>
+    <div id="extra"></div>
+
+    <footer class="pg">
+      <b>Жёсткий мобильный фильтр.</b> По умолчанию оставляем только имена с размером
+      1B · 2B · 3B · 3.8B · 4B · 5B · 7B · 8B · 9B, а также <b>mini</b> / <b>nano</b>
+      (набор размеров меняется в настройках).
+      Всё, где встречается размер больше 9B (14B, 30B, 70B, MoE вроде 26B-A4B), отбрасывается —
+      даже если в названии есть «mini».<br>
+      Источник: <a href="https://huggingface.co/api/models" target="_blank" rel="noopener">huggingface.co/api/models</a> ·
+      авторы: bartowski, mradermacher, city96, google, unsloth · ключевые слова: gguf, litert, abliterated, uncensored.<br>
+      Кнопка <b>ТОП</b> строит единый рейтинг: влезает ли в бюджет ОЗУ, свежесть, загрузки, лайки,
+      доверие к автору и готовность формата (GGUF/LiteRT) — на карточках видно число рейтинга.<br>
+      Авторы по умолчанию: bartowski, city96, google, unsloth, TheBloke, cyankiwi, lonestriker —
+      модели чужих авторов отбрасываются (видно в панели «Отсечено»).<br>
+      «☆» складывает модель в избранное (живёт в localStorage, не теряется, даже когда модель уходит из ленты).
+      Кнопка сортировки ⇅ умеет «Под мой телефон»: наверху то, что реально влезает в бюджет ~5 ГБ,
+      с оценкой веса на карточке (точная, если файлы уже подгружались).<br>
+      Вкладка <b>«Оболочки»</b> — каталог приложений для запуска моделей на телефоне (Android/iOS), с живыми
+      данными из GitHub API: последний релиз, размер APK и подбор файла под чип (для Snapdragon 8 Elite — sm8750).
+      Данные кэшируются на 6 часов, потому что GitHub без токена даёт 60 запросов в час; свои репозитории
+      добавляются полем <code>owner/repo</code>.<br>
+      Кнопка «Поделиться» на карточке собирает готовый отчёт (название, автор, размер, метки, ссылка)
+      и отдаёт его в системную шторку «Поделиться» — оттуда Telegram в пару тапов; есть и простое копирование.
+      Метка «НОВОЕ» = модель создана после предыдущего запуска, «ОБНОВЛЕНО» = старая модель, у которой
+      изменились файлы (<code>lastModified</code>). Время хранится в localStorage этого браузера.<br>
+      <b>Настройки</b> (шестерёнка в шапке): авторы, ключевые слова, разрешённые размеры, слежение за обновлениями,
+      а также экспорт/импорт .json — чтобы не править код и переносить профиль между устройствами.<br>
+      Тап по карточке открывает страницу модели на Hugging Face.<br>
+      <button class="save-app" id="saveApp" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 11 5 5 5-5"/><path d="M4 20h16"/></svg>
+        Сохранить приложение как .html
+      </button>
+    </footer>
+  </main>
+</div>
+
+<!-- кастомное всплывающее окно -->
+<div class="overlay" id="overlay" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-top">
+      <span class="modal-emoji" id="modalEmoji"></span>
+      <h2 id="modalTitle">Свежие модели</h2>
+      <p class="sub2" id="modalSub">—</p>
+    </div>
+    <div class="modal-list" id="modalList"></div>
+    <div class="modal-actions">
+      <button class="m-primary" id="modalOk">Показать новинки</button>
+      <button class="m-ghost" id="modalClose">Остаться на всех</button>
+      <button class="m-ghost" id="modalShare">📋 Поделиться списком</button>
+    </div>
+  </div>
+</div>
+
+<!-- окно скачивания файлов модели -->
+<div class="overlay" id="dlOverlay" hidden>
+  <div class="modal dl-modal" role="dialog" aria-modal="true" aria-labelledby="dlTitle">
+    <div class="dl-head">
+      <div class="dl-title-row">
+        <h2 id="dlTitle">Файлы модели</h2>
+        <button class="dl-x" id="dlClose" aria-label="Закрыть">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+        </button>
+      </div>
+      <p class="sub2" id="dlSub">загружаю список файлов…</p>
+      <p class="dl-hint" id="dlHint" hidden></p>
+    </div>
+    <div class="modal-list" id="dlList"></div>
+    <div class="modal-actions">
+      <a class="dl-page" id="dlPage" href="#" target="_blank" rel="noopener noreferrer">Все файлы на Hugging Face ↗</a>
+    </div>
+  </div>
+</div>
+
+<!-- настройки: источники, размеры, бэкап -->
+<div class="overlay" id="setOverlay" hidden>
+  <div class="modal dl-modal" role="dialog" aria-modal="true" aria-labelledby="setTitle">
+    <div class="dl-head">
+      <div class="dl-title-row">
+        <h2 id="setTitle">Настройки</h2>
+        <button class="dl-x" id="setClose" aria-label="Закрыть">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+        </button>
+      </div>
+      <p class="sub2">Что опрашивать и какие размеры оставлять</p>
+    </div>
+
+    <div class="set-body">
+      <div class="set-section">
+        <p class="set-label">Авторы <span class="hint">· author=</span></p>
+        <div class="tag-list" id="setAuthors"></div>
+        <div class="set-add">
+          <input id="addAuthor" placeholder="например, TheBloke" autocomplete="off" autocapitalize="off" spellcheck="false">
+          <button type="button" id="addAuthorBtn" aria-label="Добавить автора">＋</button>
+        </div>
+      </div>
+
+      <div class="set-section">
+        <p class="set-label">Ключевые слова <span class="hint">· search=</span></p>
+        <div class="tag-list" id="setKeywords"></div>
+        <div class="set-add">
+          <input id="addKeyword" placeholder="например, awq" autocomplete="off" autocapitalize="off" spellcheck="false">
+          <button type="button" id="addKeywordBtn" aria-label="Добавить слово">＋</button>
+        </div>
+      </div>
+
+      <div class="set-section">
+        <p class="set-label">Размеры моделей <span class="hint">· жёсткий фильтр</span></p>
+        <div class="size-opts" id="setSizes"></div>
+        <div class="presets">
+          <button class="preset" type="button" data-preset="small">до 4B</button>
+          <button class="preset" type="button" data-preset="1-8">1B–8B</button>
+          <button class="preset" type="button" data-preset="all">1B–9B</button>
+          <button class="preset" type="button" data-preset="mininano">mini/nano</button>
+        </div>
+      </div>
+
+      <div class="set-section">
+        <p class="set-label">Чьи модели показывать</p>
+        <label class="switch-row">
+          <input type="checkbox" id="setStrict">
+          <span>Только авторы из моего списка
+            <small>Поиск по ключевым словам (<code>search=gguf</code>) отдаёт модели всех подряд авторов HF —
+            этот фильтр выкидывает всё чужое ещё до показа.</small>
+          </span>
+        </label>
+        <label class="switch-row" style="margin-top:12px">
+          <input type="checkbox" id="setOriginals">
+          <span>＋ оригиналы базовых моделей
+            <small>Показывать сами базовые модели, с которых сделаны кванты (например
+            <code>Qwen/Qwen3-4B</code> для <code>bartowski/Qwen3-4B-GGUF</code>) — и только их, без прочего
+            «творчества» этих авторов.</small>
+          </span>
+        </label>
+        <p class="set-note" id="originalsHint" style="text-align:left;padding:8px 2px 0"></p>
+      </div>
+
+      <div class="set-section">
+        <label class="switch-row">
+          <input type="checkbox" id="setCheckUpdates">
+          <span>Следить за обновлениями моделей
+            <small>Второй проход по <code>lastModified</code>: старые модели, у которых обновились файлы, получат метку «ОБНОВЛЕНО» (16 доп. запросов).</small>
+          </span>
+        </label>
+      </div>
+
+      <div class="set-section">
+        <label class="switch-row">
+          <input type="checkbox" id="setVibrate">
+          <span>Вибро при новинках
+            <small>Телефон тихонько дёрнется, когда радар найдёт новые модели или обновлённые файлы. Работает в Chrome/Firefox на Android; iOS вибрацию из браузера не отдаёт.</small>
+          </span>
+        </label>
+        <div style="margin-top:8px">
+          <button class="preset" type="button" id="setVibrateTest">Проверить вибро</button>
+        </div>
+      </div>
+
+      <div class="set-section">
+        <p class="set-label">Бэкап настроек</p>
+        <div class="set-actions" style="padding:0">
+          <div class="row2">
+            <button type="button" id="setExport">⬇ Экспорт .json</button>
+            <button type="button" id="setImport">⬆ Импорт .json</button>
+          </div>
+          <p class="set-note">Экспорт сохраняет авторов, ключевые слова, размеры и флаг обновлений. Импорт заменит текущие настройки и сразу перезапустит поиск.</p>
+        </div>
+        <input type="file" id="setFile" accept="application/json,.json" hidden>
+      </div>
+    </div>
+
+    <div class="set-actions">
+      <button class="primary" type="button" id="setApply">Сохранить и обновить</button>
+      <button type="button" id="setReset">Сбросить к стандартным</button>
+    </div>
+  </div>
+</div>
+
+<!-- фильтр по размеру на главном экране -->
+<div class="overlay" id="sizeOverlay" hidden>
+  <div class="modal dl-modal" role="dialog" aria-modal="true" aria-labelledby="sizeTitle">
+    <div class="dl-head">
+      <div class="dl-title-row">
+        <h2 id="sizeTitle">Размер модели</h2>
+        <button class="dl-x" id="sizeClose" aria-label="Закрыть">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+        </button>
+      </div>
+      <p class="sub2">Какие размеры показывать в списке</p>
+    </div>
+    <div class="set-body">
+      <div class="set-section" style="border-bottom:0">
+        <div class="size-opts" id="sizeFilterOpts"></div>
+        <div class="presets">
+          <button class="preset" type="button" data-sizefilter="1-4">1B–4B</button>
+          <button class="preset" type="button" data-sizefilter="1-8">1B–8B</button>
+          <button class="preset" type="button" data-sizefilter="7-9">7B–9B</button>
+          <button class="preset" type="button" data-sizefilter="all">Все</button>
+        </div>
+      </div>
+    </div>
+    <div class="set-actions">
+      <button class="primary" type="button" id="sizeDone">Готово</button>
+    </div>
+  </div>
+</div>
+
+<!-- поделиться моделью -->
+<div class="overlay" id="shOverlay" hidden>
+  <div class="modal dl-modal sh-modal" role="dialog" aria-modal="true" aria-labelledby="shTitle">
+    <div class="dl-head">
+      <div class="dl-title-row">
+        <h2 id="shTitle">Поделиться</h2>
+        <button class="dl-x" id="shClose" aria-label="Закрыть">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+        </button>
+      </div>
+      <p class="sub2" id="shSub">—</p>
+    </div>
+
+    <div class="sh-tabs" role="group" aria-label="Формат сообщения">
+      <button class="sh-tab" type="button" data-shmode="full" aria-pressed="true">Подробный отчёт</button>
+      <button class="sh-tab" type="button" data-shmode="short" aria-pressed="false">Коротко</button>
+    </div>
+
+    <pre class="sh-preview" id="shPreview"></pre>
+
+    <div class="sh-actions">
+      <button class="sh-main" type="button" id="shNative">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7.5 6.5 4.5-4.5 4.5 4.5"/><path d="M5 14v4.5A2.5 2.5 0 0 0 7.5 21h9a2.5 2.5 0 0 0 2.5-2.5V14"/></svg>
+        <span id="shNativeLbl">Поделиться…</span>
+      </button>
+      <div class="row2">
+        <button type="button" id="shCopy">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2.5"/><path d="M15 5.5A2.5 2.5 0 0 0 12.5 3H5.5A2.5 2.5 0 0 0 3 5.5v7A2.5 2.5 0 0 0 5.5 15"/></svg>
+          Копировать
+        </button>
+        <button class="sh-tg" type="button" id="shTelegram">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M21.9 4.3 19 19.4c-.2 1-.8 1.2-1.6.8l-4.5-3.3-2.2 2.1c-.24.24-.44.44-.9.44l.32-4.6 8.4-7.6c.36-.32-.08-.5-.56-.18L7.7 12.9 3.3 11.5c-1-.3-1-1 .2-1.5l17-6.6c.8-.3 1.5.2 1.4 1.4Z"/></svg>
+          Telegram
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- сортировка -->
+<div class="overlay" id="sortOverlay" hidden>
+  <div class="modal dl-modal" role="dialog" aria-modal="true" aria-labelledby="sortTitle">
+    <div class="dl-head">
+      <div class="dl-title-row">
+        <h2 id="sortTitle">Сортировка</h2>
+        <button class="dl-x" id="sortClose" aria-label="Закрыть">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+        </button>
+      </div>
+      <p class="sub2">Бюджет под твой телефон: <b>~5 ГБ</b> на веса (12 ГБ ОЗУ минус система)</p>
+    </div>
+    <div class="set-body">
+      <div class="set-section" style="border-bottom:0">
+        <div id="sortOpts"></div>
+      </div>
+    </div>
+    <div class="set-actions">
+      <button class="primary" type="button" id="sortDone">Готово</button>
+    </div>
+  </div>
+</div>
+
+<!-- файлы релиза оболочки -->
+<div class="overlay" id="relOverlay" hidden>
+  <div class="modal dl-modal" role="dialog" aria-modal="true" aria-labelledby="relTitle">
+    <div class="dl-head">
+      <div class="dl-title-row">
+        <h2 id="relTitle">Релиз</h2>
+        <button class="dl-x" id="relClose" aria-label="Закрыть">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+        </button>
+      </div>
+      <p class="sub2" id="relSub">—</p>
+      <p class="dl-hint" id="relHint" hidden></p>
+    </div>
+    <div class="modal-list" id="relList"></div>
+    <div class="modal-actions">
+      <a class="dl-page" id="relPage" href="#" target="_blank" rel="noopener noreferrer">Релизы на GitHub ↗</a>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+
+/* =========================================================
+   КОНФИГ
+   ========================================================= */
+const CFG = {
+  MAX_SIZE: 9,           // жёсткий потолок: всё, что строго больше — выбрасываем
+  LIMIT: 100,            // сколько моделей тянуть на один запрос
+  FIRST_RUN_WINDOW: 24 * 60 * 60 * 1000, // первый запуск: «новое» = за последние 24 ч
+  LS_LAST_RUN: "hfRadar.v1.lastRun",
+  LS_SEEN: "hfRadar.v1.seen",        // карта id -> lastModified (было: массив id)
+  LS_SETTINGS: "hfRadar.v1.settings",
+  LS_FAVORITES: "hfRadar.v1.favorites",
+  FAV_MAX: 300,
+  LS_SHELLS: "hfRadar.v1.shellsCache",
+  LS_MY_SHELLS: "hfRadar.v1.myShells",
+  SHELLS_TTL: 6 * 60 * 60 * 1000,   // GitHub API: 60 запросов/час без токена
+  SEEN_MAX: 4000,
+  AUTO_REFRESH: 10 * 60 * 1000,
+  TIMEOUT: 20000,
+  UPD_TOLERANCE: 90 * 1000,          // игнорируем «обновления» моложе 90 с
+  // сколько ОЗУ реально доступно модели на телефоне (12 ГБ минус система)
+  RAM_BUDGET_GB: 5.0,
+  FILE_EXT: ["gguf", "litertlm", "tflite", "litert", "task", "bin", "onnx", "pt", "safetensors"]
+};
+
+// все размеры, которые вообще имеет смысл показывать в настройках
+const SIZE_POOL = [1, 2, 3, 3.8, 4, 5, 7, 8, 9];
+
+const OLD_DEFAULT_AUTHORS = ["bartowski", "mradermacher", "city96", "google", "unsloth"];
+const SETTINGS_VERSION = 2;
+
+const DEFAULT_SETTINGS = {
+  version: SETTINGS_VERSION,
+  authors: ["bartowski", "city96", "google", "unsloth", "TheBloke", "cyankiwi", "lonestriker"],
+  keywords: ["gguf", "litert", "abliterated", "uncensored"],
+  strictAuthors: true,     // показывать только модели из белого списка авторов
+  allowOriginals: true,    // …плюс оригиналы базовых моделей (авторы из base_model:*),
+  sizes: SIZE_POOL.slice(),          // разрешённые размеры в имени модели
+  includeMiniNano: true,
+  checkUpdates: true,
+  vibrate: true
+};
+
+const API = "https://huggingface.co/api";
+const GH_API = "https://api.github.com";
+
+/* Каталог оболочек: проверены через GitHub API 29.10.2026 */
+const SHELLS = [
+  { repo: "google-ai-edge/gallery", stars0: 25139, name: "AI Edge Gallery", by: "Google", plat: "android", fmts: ["litert"],
+    note: "Официальная витрина Google: Gemma 4 E2B/E4B и другие .litertlm. В релизе есть отдельные APK под чипы — для 8 Elite берём sm8750.", pick: true },
+  { repo: "a-ghorbani/pocketpal-ai", stars0: 8852, name: "PocketPal AI", by: "Asghar Ghorbani", plat: "android", fmts: ["gguf"],
+    note: "Самый дружелюбный GGUF-клиент: поиск моделей прямо внутри, бенчмарк tok/s, аккуратная работа с памятью.", pick: true },
+  { repo: "Mobile-Artificial-Intelligence/maid", stars0: 2743, name: "Maid", by: "Mobile AI", plat: "android", fmts: ["gguf"],
+    note: "Open-source и F-Droid: импорт GGUF из файлового менеджера, Vulkan-ускорение, без Google-сервисов." },
+  { repo: "Vali-98/ChatterUI", stars0: 2850, name: "ChatterUI", by: "Vali-98", plat: "android", fmts: ["gguf"],
+    note: "Карточки персонажей и тонкая настройка промптов — любимец ролевиков; умеет и GGUF, и Ollama." },
+  { repo: "dineshsoudagar/local-llms-on-android", stars0: 471, name: "Pocket LLM", by: "dineshsoudagar", plat: "android", fmts: ["gguf"],
+    note: "Лёгкий GGUF-клиент с GPU-ускорением под Gemma, Qwen и Llama." },
+  { repo: "shubham0204/SmolChat-Android", stars0: 898, name: "SmolChat", by: "shubham0204", plat: "android", fmts: ["gguf"],
+    note: "Минималистичный раннер для SLM — удобно, когда нужен только чат." },
+  { repo: "Siddhesh2377/ToolNeuron", stars0: 477, name: "ToolNeuron", by: "Siddhesh", plat: "android", fmts: ["gguf"],
+    note: "Приватность и инструменты: on-device чат с вызовом функций." },
+  { repo: "JHubi1/ollama-app", stars0: 1822, name: "Ollama App", by: "JHubi1", plat: "android", fmts: ["ollama"],
+    note: "Тонкий клиент к Ollama-серверу. Модель живёт не на телефоне — нужен сервер в сети." },
+  { repo: "guinmoon/LLMFarm", stars0: 2080, name: "LLMFarm", by: "guinmoon", plat: "ios", fmts: ["gguf"],
+    note: "iOS/iPadOS/macOS: GGUF, глубокие настройки инференса." },
+  { repo: "AugustDev/enchanted", stars0: 6014, name: "Enchanted", by: "AugustDev", plat: "ios", fmts: ["ollama"],
+    note: "iOS/macOS-клиент к Ollama — если сервер уже есть." },
+  { repo: "mlc-ai/mlc-llm", stars0: 23285, name: "MLC Chat", by: "MLC AI", plat: "android", fmts: ["mlc"],
+    note: "Самый быстрый на Vulkan/NPU, но модели нужны в формате MLC. APK берётся с mlc.ai." },
+  { repo: "google-ai-edge/LiteRT-LM", stars0: 6764, name: "LiteRT-LM", by: "Google", plat: "lib", fmts: ["litert"],
+    note: "Библиотека движка LiteRT-LM — если захочешь собрать свою оболочку под .litertlm." }
+];
+
+/* подсказки для выбора APK по SoC */
+const SOC_HINTS = {
+  sm8750: "★ твой 8 Elite",
+  sm8850: "8 Elite Gen 5",
+  sm8650: "8 Gen 3",
+  sm8550: "8 Gen 2",
+  tensor_g6: "Pixel Tensor G6",
+  tensor_g5: "Pixel Tensor G5",
+  arm64: "arm64 (универсальный)",
+  universal: "universal (любой телефон)",
+  x86_64: "эмулятор / x86",
+  armv7: "старые 32-бит"
+};
+const FLAME = '<svg class="flame" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 23a7 7 0 0 0 7-7c0-5-4-6.5-4-11 0 0-1.5 2-1.5 4.5 0 1.2-.6 2-1.5 2.5C10.5 9 10 6 10 6c-2 2-5 5.5-5 10a7 7 0 0 0 7 7Z"/></svg>';
+const ICON = {
+  block: '<svg class="i-big" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="m5.6 5.6 12.8 12.8"/></svg>',
+  search: '<svg class="i-big" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.8-3.8"/></svg>',
+  radar: '<svg class="i-big" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 12 4.5 4.5"/><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1" fill="currentColor"/></svg>',
+  offline: '<svg class="i-big" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M2 3l20 18"/><path d="M8.5 15.5a5 5 0 0 1 7 0"/><path d="M5 12a10 10 0 0 1 3.4-2.2"/><path d="M15.6 9.8A10 10 0 0 1 19 12"/><circle cx="12" cy="19" r="1" fill="currentColor"/></svg>',
+  cup: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4h10v5a5 5 0 0 1-10 0V4Z"/><path d="M7 5H4.5v2A3.5 3.5 0 0 0 8 10.5"/><path d="M17 5h2.5v2A3.5 3.5 0 0 1 16 10.5"/><path d="M12 14v4"/><path d="M8.5 20h7"/></svg>',
+  check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7"/></svg>',
+  dot: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="6.5" stroke-dasharray="2 3"/></svg>',
+  starBig: '<svg class="i-big" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M12 3.2l2.7 5.5 6 .87-4.35 4.25 1.04 5.98L12 16.95 6.6 19.8l1.04-5.98L3.3 9.57l6-.87Z"/></svg>',
+  blockSmall: '<svg class="i-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="m5.6 5.6 12.8 12.8"/></svg>'
+};
+const UPD_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 12a8.5 8.5 0 1 0 3-6.5"/><path d="M3 4v5h5"/></svg>';
+const RULER_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8h18v8H3z"/><path d="M7 8v3M11 8v4M15 8v3M19 8v4"/></svg>';
+const ROCKET = '<svg class="flame" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 16.5c-1.5 1.3-2 5-2 5s3.7-.5 5-2c.8-.9.8-2.2-.1-3a2.1 2.1 0 0 0-2.9 0Z"/><path d="M12 15l-3-3a22 22 0 0 1 2-4 12.6 12.6 0 0 1 8-5c0 3.5-1.6 6.2-5 8a22 22 0 0 1-4 2Z"/><path d="M9 12H4s.5-2.8 2-4c1.6-1.3 5 0 5 0"/><path d="M12 15v5s2.8-.5 4-2c1.3-1.6 0-5 0-5"/></svg>';
+const MODEL_PAGE = "https://huggingface.co/";
+
+/* =========================================================
+   DOM
+   ========================================================= */
+const el = {
+  list: document.getElementById("list"),
+  extra: document.getElementById("extra"),
+  status: document.getElementById("statusText"),
+  prevRun: document.getElementById("prevRun"),
+  brandSub: document.getElementById("brandSub"),
+  q: document.getElementById("q"),
+  clearQ: document.getElementById("clearQ"),
+  chips: document.getElementById("chips"),
+  cntNew: document.getElementById("cntNew"),
+  btnNew: document.getElementById("btnNew"),
+  btnNewCount: document.getElementById("btnNewCount"),
+  btnRefresh: document.getElementById("btnRefresh"),
+  overlay: document.getElementById("overlay"),
+  modalList: document.getElementById("modalList"),
+  modalTitle: document.getElementById("modalTitle"),
+  modalSub: document.getElementById("modalSub"),
+  modalEmoji: document.getElementById("modalEmoji"),
+  modalOk: document.getElementById("modalOk"),
+  modalClose: document.getElementById("modalClose"),
+  toast: document.getElementById("toast"),
+  dlOverlay: document.getElementById("dlOverlay"),
+  dlTitle: document.getElementById("dlTitle"),
+  dlSub: document.getElementById("dlSub"),
+  dlHint: document.getElementById("dlHint"),
+  dlList: document.getElementById("dlList"),
+  dlPage: document.getElementById("dlPage"),
+  dlClose: document.getElementById("dlClose"),
+  saveApp: document.getElementById("saveApp"),
+  btnSettings: document.getElementById("btnSettings"),
+  cntUpd: document.getElementById("cntUpd"),
+  sizeChip: document.getElementById("sizeChip"),
+  sizeChipLabel: document.getElementById("sizeChipLabel"),
+  setOverlay: document.getElementById("setOverlay"),
+  setClose: document.getElementById("setClose"),
+  setAuthors: document.getElementById("setAuthors"),
+  setKeywords: document.getElementById("setKeywords"),
+  setSizes: document.getElementById("setSizes"),
+  addAuthor: document.getElementById("addAuthor"),
+  addAuthorBtn: document.getElementById("addAuthorBtn"),
+  addKeyword: document.getElementById("addKeyword"),
+  addKeywordBtn: document.getElementById("addKeywordBtn"),
+  setCheckUpdates: document.getElementById("setCheckUpdates"),
+  setApply: document.getElementById("setApply"),
+  setReset: document.getElementById("setReset"),
+  setExport: document.getElementById("setExport"),
+  setImport: document.getElementById("setImport"),
+  setFile: document.getElementById("setFile"),
+  sizeOverlay: document.getElementById("sizeOverlay"),
+  sizeClose: document.getElementById("sizeClose"),
+  sizeDone: document.getElementById("sizeDone"),
+  sizeFilterOpts: document.getElementById("sizeFilterOpts"),
+  shOverlay: document.getElementById("shOverlay"),
+  shClose: document.getElementById("shClose"),
+  shSub: document.getElementById("shSub"),
+  shPreview: document.getElementById("shPreview"),
+  shNative: document.getElementById("shNative"),
+  shNativeLbl: document.getElementById("shNativeLbl"),
+  shCopy: document.getElementById("shCopy"),
+  shTelegram: document.getElementById("shTelegram"),
+  modalShare: document.getElementById("modalShare"),
+  cntFav: document.getElementById("cntFav"),
+  sortChip: document.getElementById("sortChip"),
+  sortChipLabel: document.getElementById("sortChipLabel"),
+  sortOverlay: document.getElementById("sortOverlay"),
+  sortClose: document.getElementById("sortClose"),
+  sortDone: document.getElementById("sortDone"),
+  sortOpts: document.getElementById("sortOpts"),
+  setVibrate: document.getElementById("setVibrate"),
+  setVibrateTest: document.getElementById("setVibrateTest"),
+  topChip: document.getElementById("topChip"),
+  setStrict: document.getElementById("setStrict"),
+  setOriginals: document.getElementById("setOriginals"),
+  originalsHint: document.getElementById("originalsHint"),
+  viewTabs: document.getElementById("viewTabs"),
+  modelsBar: document.getElementById("modelsBar"),
+  appsBar: document.getElementById("appsBar"),
+  appQ: document.getElementById("appQ"),
+  appChips: document.getElementById("appChips"),
+  appsStatus: document.getElementById("appsStatus"),
+  cntApps: document.getElementById("cntApps"),
+  addRepo: document.getElementById("addRepo"),
+  addRepoBtn: document.getElementById("addRepoBtn"),
+  relOverlay: document.getElementById("relOverlay"),
+  relTitle: document.getElementById("relTitle"),
+  relSub: document.getElementById("relSub"),
+  relHint: document.getElementById("relHint"),
+  relList: document.getElementById("relList"),
+  relPage: document.getElementById("relPage"),
+  relClose: document.getElementById("relClose")
+};
+
+/* =========================================================
+   СОСТОЯНИЕ
+   ========================================================= */
+const state = {
+  items: [],          // прошедшие фильтр
+  dropped: [],        // отсечённые (для отчёта)
+  filters: new Set(),   // активные чипы: теги (OR) + статусы (OR), между группами AND
+  query: "",
+  loading: false,
+  lastRun: null,
+  threshold: 0,
+  firstRun: false,
+  newItems: [],
+  updatedItems: [],
+  sizeFilter: [],     // пусто = все размеры
+  error: null,
+  draft: null,        // черновик настроек в открытом окне
+  shareId: null,      // модель, которой делимся
+  shareMode: "full",  // full | short
+  sort: "fresh",      // fresh | top | fit | size | downloads
+  originals: new Set(), // авторы оригиналов, найденные в текущем прогоне
+  view: "models",       // models | apps
+  appFilter: "all",
+  appQuery: "",
+  shells: [],           // каталог + свои репозитории
+  shellsData: {},       // repo -> {tag, date, assets, stars,...}
+  shellsErr: {},        // repo -> текст ошибки
+  relRepo: null,        // открытая в шторке оболочка
+  shellsRateUntil: 0,   // когда GitHub снова пустит
+  favorites: new Map()  // id -> снапшот карточки
+};
+
+/* =========================================================
+   ХРАНИЛИЩЕ (localStorage, с защитой от исключений)
+   ========================================================= */
+const store = {
+  get(key) { try { return localStorage.getItem(key); } catch (e) { return null; } },
+  set(key, val) { try { localStorage.setItem(key, String(val)); } catch (e) {} }
+};
+
+/* ---------- настройки ---------- */
+let settings = loadSettings();
+
+function normAuthor(v) {
+  return String(v || "").trim().replace(/^@/, "").replace(/\s+/g, "");
+}
+
+function normKeyword(v) {
+  return String(v || "").trim().toLowerCase();
+}
+
+function uniqList(arr, fn) {
+  const out = [];
+  for (const v of arr || []) {
+    const n = fn(v);
+    if (n && out.indexOf(n) === -1) out.push(n);
+  }
+  return out;
+}
+
+function sameList(a, b) {
+  if (!Array.isArray(a) || a.length !== b.length) return false;
+  return a.every((v, i) => String(v).toLowerCase() === String(b[i]).toLowerCase());
+}
+
+function sanitizeSettings(raw) {
+  const d = DEFAULT_SETTINGS;
+  if (!raw || typeof raw !== "object") return cloneSettings(d);
+  const sizes = Array.isArray(raw.sizes)
+    ? uniqList(raw.sizes.map(Number), v => (SIZE_POOL.indexOf(v) !== -1 ? v : null))
+    : d.sizes.slice();
+
+  // миграция v1 → v2: если у человека остались старые дефолтные авторы (с mradermacher),
+  // подставляем новый обязательный список; его собственные правки не трогаем
+  let authors = Array.isArray(raw.authors) ? uniqList(raw.authors, normAuthor) : d.authors.slice();
+  if (!raw.version || raw.version < SETTINGS_VERSION) {
+    if (sameList(authors, OLD_DEFAULT_AUTHORS)) authors = d.authors.slice();
+  }
+
+  return {
+    version: SETTINGS_VERSION,
+    authors: authors,
+    strictAuthors: raw.strictAuthors !== false,
+    allowOriginals: raw.allowOriginals !== false,
+    keywords: Array.isArray(raw.keywords) ? uniqList(raw.keywords, normKeyword) : d.keywords.slice(),
+    sizes: sizes.length ? sizes : d.sizes.slice(),
+    includeMiniNano: raw.includeMiniNano !== false,
+    checkUpdates: raw.checkUpdates !== false,
+    vibrate: raw.vibrate !== false
+  };
+}
+
+function cloneSettings(o) {
+  return {
+    version: SETTINGS_VERSION,
+    authors: o.authors.slice(),
+    strictAuthors: o.strictAuthors !== false,
+    allowOriginals: o.allowOriginals !== false,
+    keywords: o.keywords.slice(),
+    sizes: o.sizes.slice(),
+    includeMiniNano: !!o.includeMiniNano,
+    checkUpdates: !!o.checkUpdates,
+    vibrate: !!o.vibrate
+  };
+}
+
+function loadSettings() {
+  try {
+    const raw = store.get(CFG.LS_SETTINGS);
+    if (!raw) return cloneSettings(DEFAULT_SETTINGS);
+    return sanitizeSettings(JSON.parse(raw));
+  } catch (e) {
+    return cloneSettings(DEFAULT_SETTINGS);
+  }
+}
+
+/* ---------- избранное ---------- */
+function loadFavorites() {
+  const map = new Map();
+  try {
+    const raw = store.get(CFG.LS_FAVORITES);
+    const arr = raw ? JSON.parse(raw) : [];
+    if (Array.isArray(arr)) {
+      for (const it of arr) if (it && it.id) map.set(it.id, snack(it));
+    }
+  } catch (e) {}
+  return map;
+}
+
+/* минимальный «слепок» карточки, чтобы избранное жило без ленты */
+function snack(it) {
+  return {
+    id: it.id,
+    short: it.short || it.id,
+    author: it.author || "",
+    url: it.url || MODEL_PAGE + it.id,
+    sizeLabel: it.sizeLabel || "",
+    sizeValue: it.sizeValue != null ? it.sizeValue : null,
+    createdAt: it.createdAt || null,
+    lastModified: it.lastModified || null,
+    downloads: it.downloads || 0,
+    likes: it.likes || 0,
+    tags: it.tags || [],
+    library: it.library || "",
+    pipeline: it.pipeline || "",
+    gated: !!it.gated,
+    sources: [],
+    favAddedAt: it.favAddedAt || Date.now()
+  };
+}
+
+function saveFavorites() {
+  try {
+    const arr = Array.from(state.favorites.values()).slice(-CFG.FAV_MAX);
+    store.set(CFG.LS_FAVORITES, JSON.stringify(arr));
+  } catch (e) {}
+}
+
+function isFav(id) { return state.favorites.has(id); }
+
+function toggleFavorite(id) {
+  if (state.favorites.has(id)) {
+    state.favorites.delete(id);
+    toast("Убрал из избранного");
+  } else {
+    const it = state.items.find(i => i.id === id) || allFavPool().find(i => i.id === id);
+    state.favorites.set(id, snack(it || { id: id }));
+    toast("☆ В избранном");
+  }
+  saveFavorites();
+  updateBadges();
+  render();
+}
+
+function saveSettings(next) {
+  settings = sanitizeSettings(next);
+  try { store.set(CFG.LS_SETTINGS, JSON.stringify(settings)); } catch (e) {}
+  return settings;
+}
+
+function loadLastRun() {
+  const raw = store.get(CFG.LS_LAST_RUN);
+  const n = raw ? Number(raw) : NaN;
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+/* карта id -> lastModified, которую мы видели в прошлый раз */
+function loadSeen() {
+  const map = new Map();
+  try {
+    const raw = store.get(CFG.LS_SEEN);
+    if (!raw) return map;
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      // миграция со старого формата (массив id): время неизвестно -> 0
+      for (const id of parsed) map.set(String(id), 0);
+    } else if (parsed && typeof parsed === "object") {
+      for (const id of Object.keys(parsed)) map.set(id, Number(parsed[id]) || 0);
+    }
+  } catch (e) {}
+  return map;
+}
+
+function saveSeen(map, items) {
+  try {
+    for (const it of items) {
+      map.set(it.id, Math.max(map.get(it.id) || 0, it.lastModified || it.createdAt || 0));
+    }
+    let entries = Array.from(map.entries()).sort((a, b) => b[1] - a[1]);
+    if (entries.length > CFG.SEEN_MAX) entries = entries.slice(0, CFG.SEEN_MAX);
+    const obj = {};
+    for (const [id, ts] of entries) obj[id] = ts;
+    store.set(CFG.LS_SEEN, JSON.stringify(obj));
+  } catch (e) {}
+}
+
+/* =========================================================
+   ЖЁСТКИЙ МОБИЛЬНЫЙ ФИЛЬТР
+   ---------------------------------------------------------
+   Проблема: «14b» содержит «4b», «27B» содержит «7b»,
+   «26B-A4B» содержит «4b». Поэтому нельзя делать
+   наивный indexOf — вытаскиваем числовые токены размера
+   с проверкой границ и сравниваем как числа.
+   ========================================================= */
+function extractSizes(lowerId) {
+  const sizes = [];
+  // Gemma 3n: "E2B" / "E4B" = эффективные 2B / 4B, пишутся слитно с буквой «e»
+  const eRe = /(^|[^a-z0-9])e(\d+(?:\.\d+)?)b(?![a-z0-9])/g;
+  let e;
+  while ((e = eRe.exec(lowerId)) !== null) {
+    const v = parseFloat(e[2]);
+    if (Number.isFinite(v)) sizes.push(v);
+  }
+  const re = /(\d+(?:\.\d+)?)\s*b(?![a-z0-9])/g;
+  let m;
+  while ((m = re.exec(lowerId)) !== null) {
+    const prev = m.index > 0 ? lowerId[m.index - 1] : "";
+    // блокируем токены внутри слов: "8x7b", "a4b", "qwen3.8b"
+    if (/[a-z0-9.]/.test(prev)) continue;
+    const v = parseFloat(m[1]);
+    if (Number.isFinite(v)) sizes.push(v);
+  }
+  return sizes;
+}
+
+function chk(modelId) {
+  const lower = String(modelId).toLowerCase();
+  const sizes = extractSizes(lower);
+  const hasMiniNano = /(^|[^a-z])(mini|nano)([^a-z]|$)/.test(lower);
+
+  // 1) строгое отсечение всего, что больше 9B
+  const big = sizes.find(s => s > CFG.MAX_SIZE);
+  if (big !== undefined) {
+    return { ok: false, reason: big + "B > " + CFG.MAX_SIZE + "B", sizes, miniNano: hasMiniNano };
+  }
+
+  // 2) разрешённый размер ИЛИ mini/nano
+  const small = sizes.find(s => settings.sizes.indexOf(s) !== -1);
+  if (small !== undefined) {
+    return { ok: true, sizeLabel: trim(small) + "B", sizes, miniNano: hasMiniNano, hybrid: sizes.length > 1 };
+  }
+  if (hasMiniNano && settings.includeMiniNano) {
+    return { ok: true, sizeLabel: /(^|[^a-z])nano([^a-z]|$)/.test(lower) ? "nano" : "mini", sizes, miniNano: true, hybrid: false };
+  }
+  return {
+    ok: false,
+    reason: sizes.length ? "размер " + sizes.map(trim).join("/") + "B не в списке" : "нет размера/mini/nano",
+    sizes, miniNano: hasMiniNano
+  };
+}
+
+function trim(n) { return Number.isInteger(n) ? String(n) : String(n); }
+
+/* =========================================================
+   УТИЛИТЫ
+   ========================================================= */
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+const nf = new Intl.NumberFormat("ru-RU");
+
+function fmtNum(n) {
+  if (!n && n !== 0) return "—";
+  if (n >= 1e6) return (n / 1e6).toFixed(1).replace(".0", "") + "M";
+  if (n >= 1e3) return (n / 1e3).toFixed(1).replace(".0", "") + "k";
+  return nf.format(n);
+}
+
+function relTime(ts) {
+  if (!ts) return "дата неизвестна";
+  const d = Date.now() - ts;
+  if (d < 0) return "только что";
+  const min = Math.floor(d / 60000);
+  if (min < 1) return "только что";
+  if (min < 60) return min + " мин назад";
+  const h = Math.floor(min / 60);
+  if (h < 24) return h + " ч назад";
+  const days = Math.floor(h / 24);
+  if (days < 30) return days + (days % 10 === 1 && days % 100 !== 11 ? " день" : (days % 10 >= 2 && days % 10 <= 4 && (days % 100 < 10 || days % 100 >= 20) ? " дня" : " дней")) + " назад";
+  return new Date(ts).toLocaleDateString("ru-RU", { day: "numeric", month: "short" });
+}
+
+function shortTime(ts) {
+  if (!ts) return "\u2014";
+  const d = Date.now() - ts;
+  if (d < 0) return "сейчас";
+  const min = Math.floor(d / 60000);
+  if (min < 60) return Math.max(1, min) + " мин";
+  const h = Math.floor(min / 60);
+  if (h < 24) return h + " ч";
+  const days = Math.floor(h / 24);
+  if (days < 30) return days + " дн";
+  return new Date(ts).toLocaleDateString("ru-RU", { day: "numeric", month: "short" });
+}
+
+function fmtDate(ts) {
+  if (!ts) return "—";
+  return new Date(ts).toLocaleString("ru-RU", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+}
+
+function toast(msg) {
+  el.toast.textContent = msg;
+  el.toast.classList.add("show");
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => el.toast.classList.remove("show"), 2200);
+}
+
+/* =========================================================
+   ЗАГРУЗКА ДАННЫХ
+   ========================================================= */
+const EXPAND = [
+  "createdAt", "lastModified", "downloads", "likes",
+  "pipeline_tag", "library_name", "tags", "gated"
+].map(f => "&expand[]=" + f).join("");
+
+function buildRequests() {
+  const reqs = [];
+  const base = (qs) => API + "/models?" + qs + EXPAND + "&limit=" + CFG.LIMIT;
+
+  for (const a of settings.authors) {
+    reqs.push({
+      kind: "author", label: a, pass: "fresh",
+      url: base("author=" + encodeURIComponent(a) + "&sort=createdAt&direction=-1")
+    });
+    if (settings.checkUpdates) {
+      reqs.push({
+        kind: "author", label: a, pass: "updates",
+        url: base("author=" + encodeURIComponent(a) + "&sort=lastModified&direction=-1")
+      });
+    }
+  }
+
+  if (settings.strictAuthors) {
+    // Строгий режим: глобальный поиск по словам тащит модели всех авторов HF и тратит
+    // окно выдачи на мусор. Поэтому ищем каждый ключ ВНУТРИ каждого автора из списка.
+    for (const a of settings.authors) {
+      for (const k of settings.keywords) {
+        reqs.push({
+          kind: "keyword", label: k, author: a, pass: "fresh",
+          url: base("author=" + encodeURIComponent(a) + "&search=" + encodeURIComponent(k) +
+                    "&sort=createdAt&direction=-1")
+        });
+      }
+    }
+  } else {
+    for (const k of settings.keywords) {
+      reqs.push({
+        kind: "keyword", label: k, pass: "fresh",
+        url: base("search=" + encodeURIComponent(k) + "&sort=createdAt&direction=-1")
+      });
+      if (settings.checkUpdates) {
+        reqs.push({
+          kind: "keyword", label: k, pass: "updates",
+          url: base("search=" + encodeURIComponent(k) + "&sort=lastModified&direction=-1")
+        });
+      }
+    }
+  }
+  return reqs;
+}
+
+async function fetchJSON(url) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), CFG.TIMEOUT);
+  try {
+    const res = await fetch(url, { signal: ctrl.signal, headers: { Accept: "application/json" } });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    return await res.json();
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+const toTs = (v) => {
+  const n = v ? Date.parse(v) : NaN;
+  return Number.isFinite(n) ? n : null;
+};
+
+async function loadAll() {
+  const reqs = buildRequests();
+  const results = await Promise.allSettled(reqs.map(r => fetchJSON(r.url)));
+
+  let okCount = 0;
+  const map = new Map();
+
+  results.forEach((r, i) => {
+    if (r.status !== "fulfilled" || !Array.isArray(r.value)) return;
+    okCount++;
+    const src = reqs[i];
+    for (const m of r.value) {
+      const id = m.id || m.modelId;
+      if (!id) continue;
+      const createdAt = toTs(m.createdAt);
+      const lastModified = toTs(m.lastModified);
+      let item = map.get(id);
+      if (!item) {
+        item = {
+          id: id,
+          name: id,
+          author: id.includes("/") ? id.split("/")[0] : "",
+          short: id.includes("/") ? id.slice(id.indexOf("/") + 1) : id,
+          url: MODEL_PAGE + id,
+          createdAt: createdAt,
+          lastModified: lastModified,
+          likes: m.likes || 0,
+          downloads: m.downloads || 0,
+          pipeline: m.pipeline_tag || "",
+          library: m.library_name || "",
+          tags: Array.isArray(m.tags) ? m.tags : [],
+          gated: !!(m.gated && m.gated !== false) || !!m.private,
+          sources: new Set()
+        };
+        map.set(id, item);
+      } else {
+        item.likes = Math.max(item.likes, m.likes || 0);
+        item.downloads = Math.max(item.downloads, m.downloads || 0);
+        if (!item.createdAt && createdAt) item.createdAt = createdAt;
+        if (lastModified) item.lastModified = Math.max(item.lastModified || 0, lastModified);
+        if (!item.pipeline && m.pipeline_tag) item.pipeline = m.pipeline_tag;
+        if (!item.library && m.library_name) item.library = m.library_name;
+        if (!item.tags.length && Array.isArray(m.tags)) item.tags = m.tags;
+      }
+      item.sources.add(src.kind === "author" ? "автор " + src.label : "«" + src.label + "»");
+    }
+  });
+
+  // оригиналы: конкретные репозитории базовых моделей, на которых сделаны кванты
+  // из белого списка (а не «всё, что выпустил тот же автор»)
+  const whitelist = settings.authors.map(a => a.toLowerCase());
+  const originals = new Set();
+  for (const it of map.values()) {
+    if (whitelist.indexOf((it.author || "").toLowerCase()) === -1) continue;
+    for (const tag of it.tags) {
+      const m = /^base_model(?::[a-z]+)?:([A-Za-z0-9_.\-]+\/[^\s]+)$/.exec(String(tag));
+      if (m) originals.add(m[1].toLowerCase());
+    }
+  }
+
+  return { okCount, total: reqs.length, models: Array.from(map.values()), originals };
+}
+
+/* =========================================================
+   ОБРАБОТКА
+   ========================================================= */
+/* белый список: авторы из настроек + (опционально) сами репозитории-оригиналы */
+function allowedAuthors() {
+  return new Set(settings.authors.map(a => a.toLowerCase()));
+}
+
+function authorOf(id) {
+  const i = String(id).indexOf("/");
+  return (i > 0 ? id.slice(0, i) : id).toLowerCase();
+}
+
+function classify(models, originals) {
+  const kept = [];
+  const dropped = [];
+  const allowed = allowedAuthors();
+  const orig = settings.allowOriginals ? (originals || new Set()) : new Set();
+
+  for (const m of models) {
+    // 0) жёсткий белый список: свои авторы + сами оригиналы базовых моделей
+    const byAuthor = allowed.has(authorOf(m.id));
+    const byOriginal = orig.has(String(m.id).toLowerCase());
+    if (settings.strictAuthors && !byAuthor && !byOriginal) {
+      m.dropReason = "автор вне списка";
+      dropped.push(m);
+      continue;
+    }
+    m.isOriginal = !byAuthor && byOriginal;
+
+    const r = chk(m.id);
+    if (r.ok) {
+      m.sizeLabel = r.sizeLabel;
+      m.sizeValue = r.sizes.find(s => settings.sizes.indexOf(s) !== -1) || null;
+      m.hybrid = r.hybrid;
+      kept.push(m);
+    } else {
+      m.dropReason = r.reason;
+      dropped.push(m);
+    }
+  }
+
+  kept.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  dropped.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+
+  return { kept, dropped };
+}
+
+/* новые = created после прошлого запуска; обновлённые = старые, но файлы свежее */
+function markFresh(items, threshold, seen, firstRun) {
+  let nNew = 0;
+  let nUpd = 0;
+  const tol = CFG.UPD_TOLERANCE;
+
+  for (const it of items) {
+    let isNew = false;
+    if (it.createdAt) isNew = it.createdAt > threshold;
+    else if (!firstRun) isNew = !seen.has(it.id);
+
+    let isUpdated = false;
+    if (!isNew && seen.has(it.id) && it.lastModified) {
+      const wasSeen = seen.get(it.id) || 0;
+      const base = wasSeen > 0 ? Math.max(wasSeen, threshold - tol) : threshold;
+      if (it.lastModified > base + tol) {
+        // не считаем обновлением сам факт публикации: файлы появляются сразу после создания
+        const born = it.createdAt || 0;
+        isUpdated = it.lastModified > born + tol || wasSeen > 0;
+      }
+    }
+
+    it.isNew = isNew;
+    it.isUpdated = isUpdated;
+    if (isNew) nNew++;
+    else if (isUpdated) nUpd++;
+  }
+  return { nNew, nUpd };
+}
+
+/* =========================================================
+   ЗАПУСК
+   ========================================================= */
+async function run(manual) {
+  if (state.loading) return;
+  state.loading = true;
+  state.error = null;
+
+  const prevRun = loadLastRun();
+  state.lastRun = prevRun;
+  state.firstRun = !prevRun;
+  state.threshold = prevRun || (Date.now() - CFG.FIRST_RUN_WINDOW);
+
+  el.prevRun.textContent = "прошлый запуск: " + (prevRun ? fmtDate(prevRun) : "нет (первый)");
+  el.btnRefresh.classList.add("spinning");
+  setStatus("Опрашиваю Hugging Face…");
+  renderSkeletons();
+
+  try {
+    const { okCount, total, models, originals } = await loadAll();
+    if (okCount === 0) throw new Error("ни один запрос не прошёл");
+
+    state.originals = originals;
+    const { kept, dropped } = classify(models, originals);
+    const seen = loadSeen();
+    const { nNew, nUpd } = markFresh(kept, state.threshold, seen, state.firstRun);
+
+    state.items = kept;
+    state.dropped = dropped;
+    state.newItems = kept.filter(i => i.isNew);
+    state.updatedItems = kept.filter(i => i.isUpdated);
+
+    // фиксируем момент запуска — он станет «прошлым» для следующего раза
+    store.set(CFG.LS_LAST_RUN, Date.now());
+    saveSeen(seen, kept);
+
+    const parts = ["Найдено " + kept.length];
+    if (nNew) parts.push("новых " + nNew);
+    if (nUpd) parts.push("обновлено " + nUpd);
+    parts.push("отсечено " + dropped.length);
+    if (okCount < total) parts.push((total - okCount) + " запрос(ов) с ошибкой");
+    setStatus(parts.join(" · "));
+
+    render();
+    updateBadges();
+
+    // тихонько дёргаем телефон: две вспышки за новые, одна за обновления
+    if (nNew) vibrate([35, 60, 35]);
+    else if (nUpd) vibrate(30);
+
+    if (nNew || nUpd) {
+      openModal(state.firstRun);
+    } else if (manual) {
+      toast("Новых и обновлённых моделей нет");
+    }
+  } catch (err) {
+    state.error = err && err.message ? err.message : String(err);
+    setStatus("Ошибка загрузки");
+    renderError();
+  } finally {
+    state.loading = false;
+    el.btnRefresh.classList.remove("spinning");
+  }
+}
+
+function setStatus(t) { el.status.textContent = t; }
+
+/* ---------- вибро ---------- */
+function vibrate(pattern) {
+  if (!settings.vibrate) return;
+  if (typeof navigator === "undefined" || typeof navigator.vibrate !== "function") return;
+  try { navigator.vibrate(pattern); } catch (e) {}
+}
+
+/* =========================================================
+   РЕНДЕР
+   ========================================================= */
+function renderSkeletons() {
+  el.list.innerHTML = Array.from({ length: 5 }, () => '<div class="skeleton"></div>').join("");
+  el.extra.innerHTML = "";
+}
+
+function renderError() {
+  el.list.innerHTML =
+    '<div class="state">' +
+      ICON.offline +
+      '<h3>Не удалось получить данные</h3>' +
+      '<p>' + esc(state.error || "неизвестная ошибка") + '<br><br>' +
+      'Проверь интернет. Если файл открыт через <code>file://</code> и браузер блокирует запросы — ' +
+      'запусти локальный сервер: <code>python3 -m http.server</code> и открой ' +
+      '<code>http://localhost:8000/hf-mobile-radar.html</code>.</p>' +
+      '<button class="retry" id="retryBtn">Повторить</button>' +
+    '</div>';
+  const b = document.getElementById("retryBtn");
+  if (b) b.addEventListener("click", () => run(false));
+  el.extra.innerHTML = "";
+}
+
+const NON_LLM = [
+  "text-to-image", "image-to-image", "unconditional-image-generation", "text-to-video",
+  "image-to-video", "video-classification", "text-to-audio", "text-to-speech",
+  "image-segmentation", "object-detection", "depth-estimation", "image-classification"
+];
+
+function isLLM(it) {
+  if (!it.pipeline) return true;
+  return NON_LLM.indexOf(it.pipeline) === -1;
+}
+
+const TAG_FILTERS = ["llm", "gguf", "litert", "abliterated", "uncensored"];
+const STATUS_FILTERS = ["new", "updated", "fav"];
+
+function matchesTag(it, f) {
+  if (f === "llm") return isLLM(it);
+  const hay = (it.id + " " + it.tags.join(" ") + " " + it.library + " " + it.pipeline).toLowerCase();
+  if (f === "gguf") return hay.includes("gguf");
+  if (f === "litert") return hay.includes("litert") || hay.includes("tflite");
+  return hay.includes(f);           // abliterated / uncensored
+}
+
+function matchesStatus(it, f) {
+  if (f === "new") return !!it.isNew;
+  if (f === "updated") return !!it.isUpdated;
+  if (f === "fav") return isFav(it.id);
+  return true;
+}
+
+/* Теги внутри группы объединяются по ИЛИ (abliterated + uncensored = любое из двух),
+   а группа тегов и группа статусов — по И (например «новое» И «abliterated»). */
+function matchesFilters(it) {
+  const tags = Array.from(state.filters).filter(f => TAG_FILTERS.indexOf(f) !== -1);
+  const status = Array.from(state.filters).filter(f => STATUS_FILTERS.indexOf(f) !== -1);
+  if (tags.length && !tags.some(t => matchesTag(it, t))) return false;
+  if (status.length && !status.some(s2 => matchesStatus(it, s2))) return false;
+  return true;
+}
+
+function toggleFilter(f) {
+  if (state.filters.has(f)) state.filters.delete(f);
+  else state.filters.add(f);
+}
+
+function clearFilters() {
+  state.filters.clear();
+}
+
+function hasFilter(f) { return state.filters.has(f); }
+
+/* фильтр размера на клиенте: пустой список = показываем всё */
+function matchesSize(it) {
+  if (!state.sizeFilter.length) return true;
+  const key = it.sizeValue != null ? String(it.sizeValue) : normSizeKey(it.sizeLabel);
+  return state.sizeFilter.indexOf(key) !== -1;
+}
+
+function normSizeKey(label) {
+  const l = String(label || "").toLowerCase();
+  if (l === "mini" || l === "nano") return l;
+  const n = parseFloat(l);
+  return Number.isFinite(n) ? String(n) : l;
+}
+
+function sizeChipLabel() {
+  if (!state.sizeFilter.length) return "все размеры";
+  const nums = state.sizeFilter.filter(k => k !== "mini" && k !== "nano")
+    .map(Number).sort((a, b) => a - b);
+  const extra = state.sizeFilter.filter(k => k === "mini" || k === "nano");
+  let out = "";
+  if (nums.length) {
+    const contiguous = nums.every((v, i) => i === 0 || SIZE_POOL.indexOf(v) - SIZE_POOL.indexOf(nums[i - 1]) === 1);
+    out = contiguous && nums.length > 1
+      ? trim(nums[0]) + "B–" + trim(nums[nums.length - 1]) + "B"
+      : nums.map(v => trim(v) + "B").join(", ");
+  }
+  if (extra.length) out += (out ? " + " : "") + extra.join("/");
+  return out || "все размеры";
+}
+
+/* ---------- оценка «а влезет ли в телефон» ---------- */
+/* Ориентир: у квантованных GGUF/LiteRT файл ≈ 0.62 ГБ на 1B параметров (Q4_K_M).
+   Если файлы модели уже подгружены в этом сеансе — берём точный размер рекомендации. */
+const GB = 1024 * 1024 * 1024;
+
+function fitInfo(it) {
+  const budget = CFG.RAM_BUDGET_GB;
+  const cached = fileCache.get(it.id);
+  if (cached && cached.length) {
+    const rec = pickRecommended(cached);
+    if (rec) return { gb: rec.size / GB, exact: true, ok: rec.size / GB <= budget };
+  }
+  const params = it.sizeValue != null ? it.sizeValue : parseFloat(it.sizeLabel);
+  if (!Number.isFinite(params)) return { gb: null, exact: false, ok: true }; // mini/nano
+  const gb = params * 0.62;
+  return { gb: gb, exact: false, ok: gb <= budget };
+}
+
+/* элементы ленты + избранное, которого сейчас нет в ленте */
+function allFavPool() {
+  const out = [];
+  for (const [id, snap] of state.favorites) {
+    const live = state.items.find(i => i.id === id);
+    out.push(live || Object.assign({}, snap, { isNew: false, isUpdated: false, offline: true }));
+  }
+  return out;
+}
+
+function poolItems() {
+  const extra = [];
+  for (const [id, snap] of state.favorites) {
+    if (!state.items.some(i => i.id === id)) {
+      extra.push(Object.assign({}, snap, { isNew: false, isUpdated: false, offline: true, sources: [] }));
+    }
+  }
+  return state.items.concat(extra);
+}
+
+/* =========================================================
+   ТОП: сводный рейтинг «что реально стоит качать на этот телефон»
+   ========================================================= */
+const PRIMARY_AUTHORS = ["google", "unsloth", "bartowski", "thebloke"];
+
+function scoreItem(it) {
+  if (it._score != null) return it._score;
+
+  // 1) влезает ли в телефон (0..40)
+  const f = fitInfo(it);
+  let fit;
+  if (f.gb == null) {
+    fit = 20;                                  // mini/nano — размер неизвестен, но явно мелкий
+  } else if (f.ok) {
+    const use = Math.min(1, f.gb / CFG.RAM_BUDGET_GB);
+    fit = 26 + 14 * Math.max(0, (use - 0.35) / 0.65); // крупнее в рамках бюджета — лучше
+  } else {
+    fit = Math.max(0, 16 - (f.gb - CFG.RAM_BUDGET_GB) * 4);
+  }
+
+  // 2) свежесть (0..25), затухает за ~10 дней
+  const age = it.createdAt ? (Date.now() - it.createdAt) / 86400000 : 30;
+  const fresh = 25 * Math.exp(-Math.max(0, age) / 10);
+
+  // 3) загрузки (0..20), логарифмически: 10k ≈ максимум
+  const dl = 20 * Math.min(1, Math.log10(1 + (it.downloads || 0)) / 4);
+
+  // 4) лайки (0..5)
+  const likes = 5 * Math.min(1, Math.log10(1 + (it.likes || 0)) / 3);
+
+  // 5) доверие к автору (0..6) и готовность к запуску на телефоне (0..4)
+  const auth = PRIMARY_AUTHORS.indexOf((it.author || "").toLowerCase()) !== -1 ? 6 : 3;
+  const hay = (it.id + " " + it.tags.join(" ") + " " + it.library).toLowerCase();
+  const ready = /gguf|litert|tflite/.test(hay) ? 4 : 0;
+
+  const score = Math.round(fit + fresh + dl + likes + auth + ready);
+  it._score = Math.max(0, Math.min(100, score));
+  return it._score;
+}
+
+function sortItems(arr) {
+  const list = arr.slice();
+  const byFresh = (a, b) => (b.createdAt || 0) - (a.createdAt || 0);
+  if (state.sort === "top") {
+    return list.sort((a, b) => scoreItem(b) - scoreItem(a) || byFresh(a, b));
+  }
+  if (state.sort === "fit") {
+    return list.sort((a, b) => {
+      const fa = fitInfo(a), fb = fitInfo(b);
+      if (fa.ok !== fb.ok) return fa.ok ? -1 : 1;
+      const ga = fa.gb == null ? 999 : fa.gb;
+      const gb = fb.gb == null ? 999 : fb.gb;
+      if (Math.abs(ga - gb) > 0.2) return ga - gb;
+      return byFresh(a, b);
+    });
+  }
+  if (state.sort === "size") {
+    return list.sort((a, b) => {
+      const pa = a.sizeValue != null ? a.sizeValue : 99;
+      const pb = b.sizeValue != null ? b.sizeValue : 99;
+      if (pa !== pb) return pa - pb;
+      return byFresh(a, b);
+    });
+  }
+  if (state.sort === "downloads") {
+    return list.sort((a, b) => (b.downloads || 0) - (a.downloads || 0) || byFresh(a, b));
+  }
+  return list.sort(byFresh);
+}
+
+function visibleItems() {
+  const q = state.query.trim().toLowerCase();
+  const filtered = poolItems().filter(it => {
+    if (!matchesFilters(it)) return false;
+    if (!matchesSize(it)) return false;
+    if (!q) return true;
+    return (it.id + " " + it.tags.join(" ") + " " + it.pipeline).toLowerCase().includes(q);
+  });
+  return sortItems(filtered);
+}
+
+const DL_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5v11"/><path d="m7.5 10.5 4.5 4.5 4.5-4.5"/><path d="M4.5 20h15"/></svg>';
+
+const CUP_ICON = ICON.cup;
+
+function estTagHTML(it) {
+  const f = fitInfo(it);
+  if (f.gb == null) return "";
+  const gbTxt = "≈" + f.gb.toFixed(1).replace(".0", "") + " ГБ";
+  return '<span class="est-tag' + (f.ok ? "" : " tight") + (f.exact ? " exact" : "") + '" title="' +
+    (f.exact ? "точный размер рекомендуемого файла" : "оценка: ~0.62 ГБ на 1B параметров") + '">' + gbTxt + "</span>";
+}
+
+function cardHTML(it) {
+  const sizeCls = it.sizeLabel === "mini" || it.sizeLabel === "nano" ? "size-tag tag-name"
+                : (parseFloat(it.sizeLabel) >= 5 ? "size-tag mid" : "size-tag");
+
+  const hay = (it.id + " " + it.tags.join(" ")).toLowerCase();
+  const kwTags = ["gguf", "litert", "abliterated", "uncensored"].filter(k => hay.includes(k));
+
+  const seenTags = new Set();
+  const uniq = (t) => {
+    const key = String(t).toLowerCase().trim();
+    if (!key || seenTags.has(key)) return false;
+    seenTags.add(key);
+    return true;
+  };
+  kwTags.forEach(uniq);
+
+  const tagsHTML =
+    kwTags.map(t => '<span class="tag kw">' + esc(t) + "</span>").join("") +
+    [it.library, it.pipeline].filter(t => t && uniq(t))
+      .map(t => '<span class="tag">' + esc(t) + "</span>").join("") +
+    (it.gated ? '<span class="tag gated">gated</span>' : "") +
+    (it.offline ? '<span class="tag fav-note">из избранного · не в ленте</span>' : "") +
+    (it.isOriginal ? '<span class="tag origin">оригинал</span>' : "");
+
+  const srcList = Array.from(it.sources)
+    .filter(s => !kwTags.some(k => s.indexOf(k) !== -1))
+    .slice(0, 2);
+  const srcHTML = srcList.map(s => '<span class="tag src">' + esc(s) + "</span>").join("");
+
+  return (
+    '<div class="card' + (it.isNew ? " is-new" : (it.isUpdated ? " is-upd" : "")) + '">' +
+      '<a class="card-link" href="' + esc(it.url) + '" target="_blank" rel="noopener noreferrer" ' +
+        'aria-label="Открыть ' + esc(it.id) + ' на Hugging Face"></a>' +
+      '<div class="card-inner">' +
+        '<div class="card-head">' +
+          '<span class="' + sizeCls + '">' + esc(it.sizeLabel) + "</span>" +
+          estTagHTML(it) +
+          (state.sort === "top" ? '<span class="top-tag" title="рейтинг: влезает в телефон + свежесть + загрузки + автор">' +
+            CUP_ICON + esc(String(scoreItem(it))) + "</span>" : "") +
+          (it.isNew ? '<span class="badge-new">' + FLAME + "НОВОЕ</span>" : "") +
+          (it.isUpdated ? '<span class="badge-upd">' + UPD_ICON + "ОБНОВЛЕНО</span>" : "") +
+        "</div>" +
+        '<p class="name">' +
+          (it.author ? '<span class="author">' + esc(it.author) + "/</span>" : "") +
+          esc(it.short) +
+        "</p>" +
+        '<div class="tags">' + tagsHTML + srcHTML + "</div>" +
+        '<div class="foot">' +
+          '<span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 11 5 5 5-5"/><path d="M4 20h16"/></svg>' + fmtNum(it.downloads) + "</span>" +
+          '<span class="ico"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 20.5S3.5 15 3.5 9.2A4.7 4.7 0 0 1 12 6.1a4.7 4.7 0 0 1 8.5 3.1C20.5 15 12 20.5 12 20.5Z"/></svg>' + fmtNum(it.likes) + "</span>" +
+          '<span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 2"/></svg>' +
+            esc(it.isUpdated ? "обн. " + shortTime(it.lastModified) : shortTime(it.createdAt)) + "</span>" +
+          '<button class="dl-btn" type="button" data-dl="' + esc(it.id) + '" aria-label="Скачать файлы модели">' + DL_ICON + "Скачать</button>" +
+          '<button class="fav-btn' + (isFav(it.id) ? " on" : "") + '" type="button" data-fav="' + esc(it.id) +
+            '" aria-pressed="' + isFav(it.id) + '" aria-label="В избранное">' +
+            '<svg viewBox="0 0 24 24" fill="' + (isFav(it.id) ? "currentColor" : "none") + '" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 3.2l2.7 5.5 6 .87-4.35 4.25 1.04 5.98L12 16.95 6.6 19.8l1.04-5.98L3.3 9.57l6-.87Z"/></svg>' +
+          "</button>" +
+          '<button class="share-btn" type="button" data-share="' + esc(it.id) + '" aria-label="Поделиться моделью">' +
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="2.6"/><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="19" r="2.6"/><path d="m8.3 10.8 7.4-4.2M8.3 13.2l7.4 4.2"/></svg>' +
+          "</button>" +
+        "</div>" +
+      "</div>" +
+    "</div>"
+  );
+}
+
+function render() {
+  const items = visibleItems();
+
+  if (!state.items.length) {
+    el.list.innerHTML =
+      '<div class="state">ICON.radar<h3>Под фильтр ничего не попало</h3>' +
+      "<p>Среди свежих моделей выбранных авторов и ключевых слов сейчас нет вариантов ≤ " + CFG.MAX_SIZE + "B. " +
+      "Загляни позже или нажми «обновить».</p></div>";
+  } else if (!items.length) {
+    if (hasFilter("fav") && state.filters.size === 1) {
+      el.list.innerHTML =
+        '<div class="state">' + ICON.starBig + "<h3>Избранное пустое</h3>" +
+        "<p>Тапни ☆ на любой карточке — модель останется здесь, даже если уйдёт из свежей ленты.</p></div>";
+    } else {
+      const act = Array.from(state.filters).join(" + ");
+      const reasons = [];
+      if (settings.strictAuthors) reasons.push("включён строгий список авторов — по этим тегам у них может просто ничего не быть");
+      if (state.sizeFilter.length) reasons.push("сужен фильтр размеров (" + sizeChipLabel() + ")");
+      if (state.query) reasons.push("поиск «" + state.query + "»");
+      el.list.innerHTML =
+        '<div class="state">' + ICON.search + "<h3>Пусто по выбранным фильтрам</h3>" +
+        "<p>Активно: <b>" + esc(act || "—") + "</b>" +
+        (reasons.length ? "<br>" + reasons.map(esc).join(";<br>") + "." : "") +
+        "<br><br>Тапни чипы ещё раз, чтобы снять фильтр, или добавь авторов в настройках.</p></div>";
+    }
+  } else {
+    el.list.innerHTML = items.map(cardHTML).join("");
+  }
+
+  renderExtra();
+}
+
+function renderExtra() {
+  let html = "";
+
+  if (state.dropped.length) {
+    const foreign = state.dropped.filter(d => d.dropReason === "автор вне списка").length;
+    const sizeDrops = state.dropped.length - foreign;
+    const summaryBits = [];
+    if (sizeDrops) summaryBits.push("по размеру " + sizeDrops);
+    if (foreign) summaryBits.push("чужих авторов " + foreign);
+    const shown = state.dropped.slice(0, 60);
+    html +=
+      '<details class="dropped"><summary>' + ICON.blockSmall + " Отсечено: " + state.dropped.length +
+      " (" + summaryBits.join(" · ") + ")</summary>" +
+      '<div class="dropped-body">' +
+      shown.map(d => "<div>" + esc(d.id) + " <em>· " + esc(d.dropReason || "") + "</em></div>").join("") +
+      (state.dropped.length > shown.length ? "<div><em>…и ещё " + (state.dropped.length - shown.length) + "</em></div>" : "") +
+      "</div></details>";
+  }
+
+  el.extra.innerHTML = html;
+}
+
+const SORT_NAMES = { top: "ТОП", fresh: "свежие", fit: "под телефон", size: "по размеру", downloads: "по загрузкам" };
+const SORT_OPTIONS = [
+  { id: "top", label: "🏆 ТОП под мой телефон", hint: "единый рейтинг: влезает в 12 ГБ + свежесть + загрузки + доверие к автору" },
+  { id: "fresh", label: "Свежие", hint: "как обычно: сначала новые и обновлённые" },
+  { id: "fit", label: "Под мой телефон", hint: "сначала то, что точно влезает в 12 ГБ, потом мельче" },
+  { id: "size", label: "По размеру модели", hint: "от 1B к 9B" },
+  { id: "downloads", label: "По загрузкам", hint: "сначала популярные и проверенные" }
+];
+
+function updateBadges() {
+  const n = state.newItems.length;
+  const u = state.updatedItems.length;
+  el.cntNew.textContent = String(n);
+  el.cntUpd.textContent = String(u);
+  el.btnNewCount.textContent = String(n + u);
+  el.btnNew.hidden = n + u === 0;
+  el.btnNew.title = n + " новых · " + u + " обновлено";
+  const updChip = el.cntUpd.closest(".chip");
+  if (updChip) updChip.hidden = u === 0;
+  if (u === 0 && hasFilter("updated")) { state.filters.delete("updated"); syncChips(); }
+  el.sizeChipLabel.textContent = sizeChipLabel();
+  el.sizeChip.classList.toggle("has-val", state.sizeFilter.length > 0);
+  el.cntFav.textContent = String(state.favorites.size);
+  const favChip = el.cntFav.closest(".chip");
+  if (favChip) favChip.classList.toggle("has-val", hasFilter("fav"));
+  el.topChip.setAttribute("aria-pressed", String(state.sort === "top"));
+  el.sortChipLabel.textContent = "сортировка";
+  // подсвечиваем чип сортировки только когда выбран режим помимо «свежих» и ТОП
+  el.sortChip.classList.toggle("has-val", state.sort !== "fresh" && state.sort !== "top");
+  el.brandSub.textContent = state.firstRun
+    ? "первый запуск · база создана"
+    : "SD 8 Elite · 12 ГБ · ≤ " + (settings.sizes.length ? Math.max.apply(null, settings.sizes) : CFG.MAX_SIZE) + "B";
+}
+
+/* =========================================================
+   МОДАЛКА
+   ========================================================= */
+function modalRow(it, badge) {
+  const time = it.isUpdated ? "обновлено " + relTime(it.lastModified) : relTime(it.createdAt);
+  return (
+    '<a class="m-item' + (badge === "upd" ? " m-item-upd" : "") + '" href="' + esc(it.url) + '" target="_blank" rel="noopener noreferrer">' +
+      '<span class="m-name"><b>' + esc(it.short || it.id) + "</b><small>" + esc(it.author || "") + " · " + esc(time) + "</small></span>" +
+      '<span class="m-size">' + esc(it.sizeLabel) + "</span>" +
+    "</a>"
+  );
+}
+
+function modalPrimaryLabel() {
+  const n = state.newItems.length;
+  const u = state.updatedItems.length;
+  if (n && u) return "Показать все " + (n + u);
+  if (n) return "Показать новинки (" + n + ")";
+  if (u) return "Показать обновлённые (" + u + ")";
+  return "Закрыть";
+}
+
+function openModal(firstRun) {
+  const news = state.newItems.slice(0, 8);
+  const upds = state.updatedItems.slice(0, 8);
+  el.modalEmoji.innerHTML = firstRun ? ROCKET : FLAME;
+
+  const total = state.newItems.length + state.updatedItems.length;
+  el.modalTitle.innerHTML = firstRun
+    ? "База создана · <em>" + state.newItems.length + "</em>"
+    : "Есть движение: <em>" + total + "</em>";
+
+  const bits = [];
+  if (state.newItems.length) bits.push("новых " + state.newItems.length);
+  if (state.updatedItems.length) bits.push("обновлено " + state.updatedItems.length);
+  el.modalSub.textContent = firstRun
+    ? "Первый запуск: показываю то, что появилось за последние 24 часа. Дальше буду сравнивать с этим моментом."
+    : bits.join(" · ") + " после запуска " + fmtDate(state.lastRun);
+
+  let html = "";
+  if (news.length) {
+    html += '<div class="m-section">НОВЫЕ МОДЕЛИ</div>' + news.map(it => modalRow(it, "new")).join("");
+    if (state.newItems.length > news.length) {
+      html += '<div class="m-more">и ещё ' + (state.newItems.length - news.length) + " новых</div>";
+    }
+  }
+  if (upds.length) {
+    html += '<div class="m-section">ОБНОВЛЁННЫЕ ФАЙЛЫ</div>' + upds.map(it => modalRow(it, "upd")).join("");
+    if (state.updatedItems.length > upds.length) {
+      html += '<div class="m-more">и ещё ' + (state.updatedItems.length - upds.length) + " обновлённых</div>";
+    }
+  }
+  el.modalList.innerHTML = html;
+  el.modalOk.textContent = modalPrimaryLabel();
+
+  el.overlay.hidden = false;
+  document.body.style.overflow = "hidden";
+}
+
+function closeModal() {
+  el.overlay.hidden = true;
+  syncBodyScroll();
+}
+
+
+/* =========================================================
+   СКАЧИВАНИЕ ФАЙЛОВ МОДЕЛИ
+   Тянем дерево файлов через /api/models/{id}/tree/main,
+   показываем реальные кванты с размерами и прямыми ссылками.
+   ========================================================= */
+const fileCache = new Map();
+
+function fmtBytes(bytes) {
+  if (!bytes && bytes !== 0) return "—";
+  const gb = bytes / (1024 * 1024 * 1024);
+  if (gb >= 1) return gb.toFixed(gb >= 10 ? 1 : 2).replace(/\.00$/, "") + " ГБ";
+  return Math.max(1, Math.round(bytes / (1024 * 1024))) + " МБ";
+}
+
+function quantLabel(name, sizeLabel) {
+  const lower = name.toLowerCase();
+  const q = lower.match(/(iq\d+_[a-z]{1,2}|q\d+_k_[smlx]{1,2}|q\d+_k|q\d+_\d+|q\d+|bf16|f16|f32|int[48]|fp16)/);
+  if (q) return q[1].toUpperCase();
+  const ext = lower.split(".").pop();
+  if (ext === "litertlm") return "LiteRT";
+  if (ext === "tflite") return "TFLite";
+  if (ext === "task") return "Task";
+  if (ext === "gguf") return "GGUF";
+  return (sizeLabel || ext || "").toUpperCase();
+}
+
+function isWeightsFile(path) {
+  const ext = path.toLowerCase().split(".").pop();
+  if (CFG.FILE_EXT.indexOf(ext) === -1) return false;
+  if (/(^|\/)(README|\.gitattributes|config\.json|tokenizer)/i.test(path)) return false;
+  return true;
+}
+
+async function loadFiles(id) {
+  if (fileCache.has(id)) return fileCache.get(id);
+  const data = await fetchJSON(API + "/models/" + id.split("/").map(encodeURIComponent).join("/") + "/tree/main?recursive=true");
+  if (!Array.isArray(data)) throw new Error("неожиданный ответ API");
+  const files = data
+    .filter(f => f.type === "file" && isWeightsFile(f.path))
+    .map(f => ({
+      path: f.path,
+      size: (f.lfs && f.lfs.size) || f.size || 0,
+      url: MODEL_PAGE + id + "/resolve/main/" + f.path.split("/").map(encodeURIComponent).join("/") + "?download=true"
+    }))
+    .sort((a, b) => a.size - b.size);
+  fileCache.set(id, files);
+  const live = state.items.find(i => i.id === id);
+  if (live) { delete live._score; if (state.sort === "top") render(); }
+  return files;
+}
+
+function downloadURL(id, path) {
+  return MODEL_PAGE + id + "/resolve/main/" + path.split("/").map(encodeURIComponent).join("/") + "?download=true";
+}
+
+function dlRow(file, id, recPath) {
+  const base = file.path.split("/").pop();
+  const isRec = file.path === recPath;
+  const isAux = /mmproj|projector|vision|embed/i.test(base);
+  const isSnap = /qualcomm|snapdragon|qcs|s8e|elite/i.test(base);
+  const ext = base.toLowerCase().split(".").pop().toUpperCase();
+  return (
+    '<div class="f-row' + (isRec ? " rec" : "") + '">' +
+      '<a class="f-main" href="' + esc(downloadURL(id, file.path)) + '" target="_blank" rel="noopener noreferrer" download>' +
+        '<span class="f-txt">' +
+          '<span class="f-name">' + esc(base) + "</span>" +
+          '<span class="f-meta">' +
+            '<span class="f-quant' + (isRec ? " rec" : "") + '">' + esc(isRec ? "★ " + quantLabel(base) : quantLabel(base)) + "</span>" +
+            '<span>' + esc(ext) + "</span>" +
+            '<span class="f-size">' + fmtBytes(file.size) + "</span>" +
+            (isSnap ? "<span>Snapdragon</span>" : "") +
+            (isAux ? "<span>вспомогательный</span>" : "") +
+          "</span>" +
+        "</span>" +
+        '<span class="f-go"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5v11"/><path d="m7.5 10.5 4.5 4.5 4.5-4.5"/><path d="M4.5 20h15"/></svg></span>' +
+      "</a>" +
+      '<button class="f-copy" type="button" data-copy="' + esc(downloadURL(id, file.path)) + '" aria-label="Скопировать ссылку">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2.5"/><path d="M15 5.5A2.5 2.5 0 0 0 12.5 3H5.5A2.5 2.5 0 0 0 3 5.5v7A2.5 2.5 0 0 0 5.5 15"/></svg>' +
+      "</button>" +
+    "</div>"
+  );
+}
+
+/* рекомендация: файл под Snapdragon, иначе самый крупный из влезающих в ОЗУ */
+function pickRecommended(files) {
+  if (!files || !files.length) return null;
+  const budget = CFG.RAM_BUDGET_GB * 1024 * 1024 * 1024;
+  const main = files.filter(f => !/mmproj|projector/i.test(f.path));
+  if (!main.length) return null;
+  const fitting = main.filter(f => f.size <= budget);
+  const snapFit = fitting.filter(f => /qualcomm|snapdragon|qcs|s8e|elite/i.test(f.path));
+  return snapFit.length ? snapFit[snapFit.length - 1]
+       : (fitting.length ? fitting[fitting.length - 1] : main[0]);
+}
+
+async function openDownload(id) {
+  const item = state.items.find(i => i.id === id);
+  el.dlOverlay.hidden = false;
+  document.body.style.overflow = "hidden";
+  el.dlTitle.textContent = item ? item.short : id;
+  el.dlSub.textContent = (item && item.author ? item.author + " · " : "") + "ищу файлы…";
+  el.dlHint.hidden = true;
+  el.dlPage.href = MODEL_PAGE + id + "/tree/main";
+  el.dlList.innerHTML = Array.from({ length: 4 }, () => '<div class="skeleton" style="height:52px"></div>').join("");
+
+  let files;
+  try {
+    files = await loadFiles(id);
+  } catch (err) {
+    const msg = String(err && err.message || err);
+    const gated = /401|403|gated/i.test(msg);
+    el.dlSub.textContent = item ? item.short : id;
+    el.dlList.innerHTML =
+      '<div class="state" style="margin-top:0">' +
+        (gated
+          ? "<h3>Модель закрыта (gated)</h3><p>Нужно войти в аккаунт Hugging Face и принять условия на странице модели — после этого файлы станут доступны.</p>"
+          : "<h3>Не удалось получить список файлов</h3><p>" + esc(msg) + "</p>") +
+        '<button class="retry" id="dlRetry">Повторить</button>' +
+      "</div>";
+    const r = document.getElementById("dlRetry");
+    if (r) r.addEventListener("click", () => { fileCache.delete(id); openDownload(id); });
+    return;
+  }
+
+  if (!files.length) {
+    el.dlSub.textContent = item ? item.short : id;
+    el.dlList.innerHTML =
+      '<div class="state" style="margin-top:0"><h3>Готовых файлов пока нет</h3>' +
+      "<p>В репозитории ещё не выложили веса (бывает сразу после создания модели) " +
+      "или они лежат в другом формате. Загляни на страницу модели чуть позже.</p></div>";
+    return;
+  }
+
+  const rec = pickRecommended(files);
+  const recPath = rec ? rec.path : null;
+
+  el.dlSub.textContent = files.length + " файл(ов) · от " + fmtBytes(files[0].size) + " до " + fmtBytes(files[files.length - 1].size);
+  el.dlHint.hidden = false;
+  el.dlHint.innerHTML = rec
+    ? "<b>★ " + esc(rec.path.split("/").pop()) + "</b> — лучший выбор под 12 ГБ ОЗУ (" + fmtBytes(rec.size) +
+      "). Тап по строке запускает скачивание напрямую с Hugging Face."
+    : "Тап по строке запускает скачивание напрямую с Hugging Face.";
+
+  el.dlList.innerHTML = files
+    .slice()
+    .reverse()             // крупные сверху
+    .map(f => dlRow(f, id, recPath))
+    .join("");
+}
+
+function closeDownload() {
+  el.dlOverlay.hidden = true;
+  syncBodyScroll();
+}
+
+async function copyText(text, okMsg) {
+  try {
+    await navigator.clipboard.writeText(text);
+    toast(okMsg || "Ссылка скопирована");
+  } catch (e) {
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+      toast(okMsg || "Ссылка скопирована");
+    } catch (e2) {
+      toast("Не удалось скопировать");
+    }
+  }
+}
+
+/* сохранение самого приложения в .html */
+function saveAppFile() {
+  try {
+    const clone = document.documentElement.cloneNode(true);
+    const empty = (sel) => { const n = clone.querySelector(sel); if (n) n.innerHTML = ""; };
+    empty("#list");
+    empty("#extra");
+    const q = clone.querySelector("#q");
+    if (q) q.value = "";
+    const clr = clone.querySelector("#clearQ");
+    if (clr) clr.hidden = true;
+    clone.querySelectorAll(".overlay").forEach(o => { o.hidden = true; });
+    const toastEl = clone.querySelector("#toast");
+    if (toastEl) { toastEl.className = "toast"; toastEl.textContent = ""; }
+    const blob = new Blob(["<!DOCTYPE html>\n" + clone.outerHTML], { type: "text/html;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "hf-mobile-radar.html";
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+    toast("Файл приложения сохранён");
+  } catch (e) {
+    toast("Браузер не дал сохранить файл");
+  }
+}
+
+
+/* =========================================================
+   НАСТРОЙКИ: авторы, ключевые слова, размеры, бэкап
+   ========================================================= */
+function openSettings() {
+  state.draft = cloneSettings(settings);
+  renderDraft();
+  el.setOverlay.hidden = false;
+  document.body.style.overflow = "hidden";
+}
+
+function closeSettings() {
+  el.setOverlay.hidden = true;
+  syncBodyScroll();
+}
+
+function renderDraft() {
+  const d = state.draft;
+
+  el.setAuthors.innerHTML = d.authors.length
+    ? d.authors.map(a => '<span class="tag-edit">' + esc(a) +
+        '<button type="button" data-rm-author="' + esc(a) + '" aria-label="Убрать ' + esc(a) + '">×</button></span>').join("")
+    : '<span class="set-note" style="text-align:left">Список пуст — добавь хотя бы одного автора</span>';
+
+  el.setKeywords.innerHTML = d.keywords.length
+    ? d.keywords.map(k => '<span class="tag-edit kw">' + esc(k) +
+        '<button type="button" data-rm-keyword="' + esc(k) + '" aria-label="Убрать ' + esc(k) + '">×</button></span>').join("")
+    : '<span class="set-note" style="text-align:left">Список пуст — добавь хотя бы одно слово</span>';
+
+  el.setSizes.innerHTML =
+    SIZE_POOL.map(v => {
+      const on = d.sizes.indexOf(v) !== -1;
+      return '<button class="size-opt' + (on ? " on" : "") + '" type="button" data-size="' + v + '" aria-pressed="' + on + '">' + trim(v) + "B</button>";
+    }).join("") +
+    '<button class="size-opt' + (d.includeMiniNano ? " on" : "") + '" type="button" data-size="mininano" aria-pressed="' + d.includeMiniNano + '">mini / nano</button>';
+
+  el.setCheckUpdates.checked = !!d.checkUpdates;
+  el.setVibrate.checked = !!d.vibrate;
+  el.setStrict.checked = !!d.strictAuthors;
+  el.setOriginals.checked = !!d.allowOriginals;
+
+  const found = Array.from(state.originals || []);
+  el.originalsHint.textContent = found.length
+    ? "Найдено оригиналов: " + found.length + " — " + found.slice(0, 4).join(", ") +
+      (found.length > 4 ? "…" : "")
+    : "Оригиналы появятся после первого прогона с этими авторами.";
+}
+
+function draftAdd(kind, rawValue, input) {
+  const isAuthor = kind === "author";
+  const val = isAuthor ? normAuthor(rawValue) : normKeyword(rawValue);
+  if (!val) return;
+  const list = isAuthor ? state.draft.authors : state.draft.keywords;
+  const clean = isAuthor ? val : val.replace(/[^\w.\-]+/g, "-");
+  if (list.indexOf(clean) === -1) list.push(clean);
+  if (input) input.value = "";
+  renderDraft();
+}
+
+function draftRemove(kind, value) {
+  if (kind === "author") {
+    state.draft.authors = state.draft.authors.filter(a => a !== value);
+  } else {
+    state.draft.keywords = state.draft.keywords.filter(k => k !== value);
+  }
+  renderDraft();
+}
+
+function draftToggleSize(val) {
+  if (val === "mininano") {
+    state.draft.includeMiniNano = !state.draft.includeMiniNano;
+  } else {
+    const n = Number(val);
+    const i = state.draft.sizes.indexOf(n);
+    if (i === -1) {
+      state.draft.sizes.push(n);
+      state.draft.sizes.sort((a, b) => a - b);
+    } else {
+      if (state.draft.sizes.length === 1) { toast("Оставь хотя бы один размер"); return; }
+      state.draft.sizes.splice(i, 1);
+    }
+  }
+  renderDraft();
+}
+
+function draftPreset(name) {
+  if (name === "small") state.draft.sizes = [1, 2, 3, 3.8, 4];
+  if (name === "1-8") state.draft.sizes = [1, 2, 3, 3.8, 4, 5, 7, 8];
+  if (name === "all") state.draft.sizes = SIZE_POOL.slice();
+  if (name === "mininano") {
+    state.draft.sizes = SIZE_POOL.slice();
+    state.draft.includeMiniNano = true;
+  }
+  renderDraft();
+}
+
+function applySettings() {
+  const d = state.draft;
+  if (!d.authors.length) { toast("Добавь хотя бы одного автора"); return; }
+  if (!d.keywords.length) { toast("Добавь хотя бы одно ключевое слово"); return; }
+  saveSettings(d);
+  closeSettings();
+  toast("Настройки сохранены");
+  run(false);
+}
+
+function resetSettings() {
+  state.draft = cloneSettings(DEFAULT_SETTINGS);
+  renderDraft();
+  toast("Вернул стандартные значения — не забудь сохранить");
+}
+
+/* ---------- бэкап ---------- */
+function exportSettings() {
+  const payload = {
+    app: "hf-mobile-radar",
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    settings: sanitizeSettings(state.draft || settings),
+    favorites: Array.from(state.favorites.values())
+  };
+  try {
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    const stamp = new Date().toISOString().slice(0, 10);
+    a.href = URL.createObjectURL(blob);
+    a.download = "hf-radar-settings-" + stamp + ".json";
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+    toast("Настройки выгружены в .json");
+  } catch (e) {
+    toast("Не удалось выгрузить настройки");
+  }
+}
+
+function importSettingsFile(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const parsed = JSON.parse(String(reader.result));
+      const raw = parsed && parsed.settings ? parsed.settings : parsed;
+      if (!raw || typeof raw !== "object") throw new Error("не похоже на файл настроек");
+      const next = sanitizeSettings(raw);
+      if (!next.authors.length || !next.keywords.length) throw new Error("в файле пустые списки авторов или слов");
+      state.draft = next;
+      renderDraft();
+      saveSettings(next);
+
+      // избранное объединяем, чтобы импорт не стёр то, что уже накоплено
+      let addedFav = 0;
+      if (Array.isArray(parsed && parsed.favorites)) {
+        for (const it of parsed.favorites) {
+          if (it && it.id && !state.favorites.has(it.id)) {
+            state.favorites.set(it.id, snack(it));
+            addedFav++;
+          }
+        }
+        if (addedFav) saveFavorites();
+      }
+
+      closeSettings();
+      toast("Импортировано: " + next.authors.length + " авторов, " + next.keywords.length +
+            " слов" + (addedFav ? " · избранного +" + addedFav : ""));
+      run(false);
+    } catch (e) {
+      toast("Импорт не удался: " + (e && e.message ? e.message : "ошибка чтения"));
+    }
+  };
+  reader.onerror = () => toast("Не удалось прочитать файл");
+  reader.readAsText(file);
+}
+
+/* =========================================================
+   ФИЛЬТР ПО РАЗМЕРУ (только отображение, не жёсткий фильтр)
+   ========================================================= */
+function openSizeFilter() {
+  renderSizeFilterOpts();
+  el.sizeOverlay.hidden = false;
+  document.body.style.overflow = "hidden";
+}
+
+function closeSizeFilter() {
+  el.sizeOverlay.hidden = true;
+  syncBodyScroll();
+}
+
+function renderSizeFilterOpts() {
+  const sel = state.sizeFilter;
+  el.sizeFilterOpts.innerHTML =
+    SIZE_POOL.map(v => {
+      const on = sel.indexOf(String(v)) !== -1;
+      return '<button class="size-opt' + (on ? " on" : "") + '" type="button" data-sz="' + v + '" aria-pressed="' + on + '">' + trim(v) + "B</button>";
+    }).join("") +
+    ["mini", "nano"].map(k => {
+      const on = sel.indexOf(k) !== -1;
+      return '<button class="size-opt' + (on ? " on" : "") + '" type="button" data-sz="' + k + '" aria-pressed="' + on + '">' + k + "</button>";
+    }).join("");
+}
+
+function toggleSizeFilter(key) {
+  const i = state.sizeFilter.indexOf(key);
+  if (i === -1) state.sizeFilter.push(key);
+  else state.sizeFilter.splice(i, 1);
+  renderSizeFilterOpts();
+  updateBadges();
+  render();
+}
+
+function sizeFilterPreset(name) {
+  if (name === "all") state.sizeFilter = [];
+  else if (name === "1-4") state.sizeFilter = ["1", "2", "3", "3.8", "4"];
+  else if (name === "1-8") state.sizeFilter = ["1", "2", "3", "3.8", "4", "5", "7", "8"];
+  else if (name === "7-9") state.sizeFilter = ["7", "8", "9"];
+  renderSizeFilterOpts();
+  updateBadges();
+  render();
+}
+
+/* =========================================================
+   СОРТИРОВКА
+   ========================================================= */
+function openSort() {
+  renderSortOpts();
+  el.sortOverlay.hidden = false;
+  document.body.style.overflow = "hidden";
+}
+
+function closeSort() {
+  el.sortOverlay.hidden = true;
+  syncBodyScroll();
+}
+
+function renderSortOpts() {
+  el.sortOpts.innerHTML = SORT_OPTIONS.map(o =>
+    '<button class="sort-opt' + (state.sort === o.id ? " on" : "") + '" type="button" data-sort="' + o.id + '">' +
+      '<span class="s-ico">' + (state.sort === o.id ? ICON.check : ICON.dot) + "</span>" +
+      "<span>" + esc(o.label) + "<small>" + esc(o.hint) + "</small></span>" +
+    "</button>"
+  ).join("");
+}
+
+function setSort(id) {
+  state.sort = id;
+  renderSortOpts();
+  updateBadges();
+  render();
+}
+
+/* держим скролл body заблокированным, пока открыт хоть один sheet */
+function syncBodyScroll() {
+  const open = !el.overlay.hidden || !el.dlOverlay.hidden || !el.setOverlay.hidden ||
+               !el.sizeOverlay.hidden || !el.shOverlay.hidden || !el.sortOverlay.hidden ||
+               !el.relOverlay.hidden;
+  document.body.style.overflow = open ? "hidden" : "";
+}
+
+
+/* =========================================================
+   ПОДЕЛИТЬСЯ
+   ========================================================= */
+function maxAllowedLabel() {
+  return settings.sizes.length ? Math.max.apply(null, settings.sizes) : CFG.MAX_SIZE;
+}
+
+function modelTags(it, limit) {
+  const hay = (it.id + " " + it.tags.join(" ")).toLowerCase();
+  const kws = ["gguf", "litert", "tflite", "abliterated", "uncensored"].filter(k => hay.includes(k));
+  const extra = [it.library, it.pipeline].filter(Boolean)
+    .filter(t => kws.indexOf(String(t).toLowerCase()) === -1);
+  const all = kws.concat(extra);
+  return limit ? all.slice(0, limit) : all;
+}
+
+/* текстовый отчёт для буфера/Telegram */
+function shareText(it, mode) {
+  const name = it.short || it.id;
+  const flag = it.isNew ? "🔥 НОВОЕ" : (it.isUpdated ? "🔄 ОБНОВЛЕНО" : "");
+
+  if (mode === "short") {
+    return "🤖 " + name + " (" + it.sizeLabel + ")" + (flag ? " — " + flag : "") + "\n" + it.url;
+  }
+
+  const lines = [];
+  lines.push("🤖 " + name);
+  lines.push("👤 " + (it.author || "—") + " · " + it.sizeLabel + (flag ? " · " + flag : ""));
+  lines.push("");
+  lines.push("🔗 " + it.url);
+  lines.push("");
+
+  const stat = [];
+  stat.push("📥 " + fmtNum(it.downloads) + " загрузок");
+  stat.push("❤️ " + fmtNum(it.likes));
+  stat.push("🕐 " + (it.isUpdated ? "обновлена " : "добавлена ") +
+            relTime(it.isUpdated ? it.lastModified : it.createdAt));
+  lines.push(stat.join(" · "));
+
+  const tags = modelTags(it, 4);
+  if (tags.length) lines.push("🏷 " + tags.join(", "));
+
+  // если файлы уже подгружались в этом сеансе — подсказываем квант под телефон
+  const cached = fileCache.get(it.id);
+  const rec = cached ? pickRecommended(cached) : null;
+  if (rec) {
+    lines.push("💾 советую: " + rec.path.split("/").pop() + " · " + fmtBytes(rec.size));
+  }
+
+  lines.push("");
+  lines.push("via LLM Radar · лёгкие модели ≤ " + maxAllowedLabel() + "B для смартфона");
+  return lines.join("\n");
+}
+
+/* список новинок/обновлений одним сообщением — «скинул братве» */
+function listShareText(items) {
+  const top = items.slice(0, 10);
+  const lines = [];
+  const n = state.newItems.length;
+  const u = state.updatedItems.length;
+  const head = [];
+  if (n) head.push("🔥 новых " + n);
+  if (u) head.push("🔄 обновлено " + u);
+  lines.push("📡 LLM Radar — " + head.join(" · "));
+  lines.push("лёгкие модели ≤ " + maxAllowedLabel() + "B");
+  lines.push("");
+  for (const it of top) {
+    lines.push((it.isNew ? "🔥 " : "🔄 ") + (it.short || it.id) + " (" + it.sizeLabel + ")\n" + it.url);
+  }
+  if (items.length > top.length) lines.push("…и ещё " + (items.length - top.length));
+  return lines.join("\n");
+}
+
+async function doShareList() {
+  const items = state.newItems.concat(state.updatedItems);
+  if (!items.length) { toast("Пока нечем делиться"); return; }
+  const text = listShareText(items);
+  const canNative = typeof navigator !== "undefined" && typeof navigator.share === "function";
+  if (canNative) {
+    try {
+      await navigator.share({ title: "LLM Radar", text: text });
+      return;
+    } catch (e) {
+      if (e && e.name === "AbortError") return;
+    }
+  }
+  await copyText(text, "Список скопирован — вставляй в чат");
+  window.open("https://t.me/share/url?url=" + encodeURIComponent(MODEL_PAGE) + "&text=" + encodeURIComponent(text),
+              "_blank", "noopener");
+}
+
+function shareTelegramURL(text, url) {
+  return "https://t.me/share/url?url=" + encodeURIComponent(url) + "&text=" + encodeURIComponent(text);
+}
+
+function renderShareSheet() {
+  const it = state.items.find(i => i.id === state.shareId);
+  if (!it) return;
+  el.shPreview.textContent = shareText(it, state.shareMode);
+  el.shSub.textContent = (it.author ? it.author + " · " : "") + it.sizeLabel +
+    (it.isNew ? " · новое" : (it.isUpdated ? " · обновлено" : ""));
+  el.shOverlay.querySelectorAll("[data-shmode]").forEach(b => {
+    b.setAttribute("aria-pressed", String(b.dataset.shmode === state.shareMode));
+  });
+  // нативная шторка есть не везде — если нет, кнопка превращается в «Копировать и открыть Telegram»
+  const canNative = typeof navigator !== "undefined" && typeof navigator.share === "function";
+  el.shNative.dataset.mode = canNative ? "native" : "fallback";
+  el.shNativeLbl.textContent = canNative ? "Поделиться…" : "Скопировать и в Telegram";
+}
+
+function openShare(id) {
+  state.shareId = id;
+  el.shOverlay.hidden = false;
+  document.body.style.overflow = "hidden";
+  renderShareSheet();
+}
+
+function closeShare() {
+  el.shOverlay.hidden = true;
+  syncBodyScroll();
+}
+
+async function doNativeShare() {
+  const it = state.items.find(i => i.id === state.shareId);
+  if (!it) return;
+  const text = shareText(it, state.shareMode);
+  const canNative = typeof navigator !== "undefined" && typeof navigator.share === "function";
+  if (!canNative) {
+    await copyText(text, "Скопировано — вставляй в чат");
+    window.open(shareTelegramURL(text, it.url), "_blank", "noopener");
+    return;
+  }
+  try {
+    await navigator.share({ title: it.short || it.id, text: text, url: it.url });
+  } catch (e) {
+    // AbortError = пользователь передумал, это нормально и молчим
+    if (!e || e.name !== "AbortError") {
+      await copyText(text, "Не вышло открыть шторку — текст скопирован");
+    }
+  }
+}
+
+
+/* =========================================================
+   ОБОЛОЧКИ (GitHub): загрузка релизов, кэш, рендер
+   ========================================================= */
+function loadMyShells() {
+  try {
+    const raw = store.get(CFG.LS_MY_SHELLS);
+    const arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr.filter(r => typeof r === "string" && /^[\w.-]+\/[\w.-]+$/.test(r)) : [];
+  } catch (e) { return []; }
+}
+
+function saveMyShells(list) {
+  try { store.set(CFG.LS_MY_SHELLS, JSON.stringify(list.slice(0, 60))); } catch (e) {}
+}
+
+function shellCatalog() {
+  const mine = loadMyShells().map(repo => ({
+    repo: repo, name: repo.split("/")[1] || repo, by: repo.split("/")[0],
+    plat: "android", fmts: [], note: "Мой репозиторий", mine: true
+  }));
+  return SHELLS.concat(mine);
+}
+
+function loadShellCache() {
+  try {
+    const raw = store.get(CFG.LS_SHELLS);
+    const obj = raw ? JSON.parse(raw) : null;
+    if (!obj || !obj.ts || !obj.data) return null;
+    return obj;
+  } catch (e) { return null; }
+}
+
+function saveShellCache(data) {
+  try { store.set(CFG.LS_SHELLS, JSON.stringify({ ts: Date.now(), data: data })); } catch (e) {}
+}
+
+async function ghJSON(url) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), CFG.TIMEOUT);
+  try {
+    const res = await fetch(url, { signal: ctrl.signal, headers: { Accept: "application/vnd.github+json" } });
+    if (res.status === 403 || res.status === 429) {
+      const reset = Number(res.headers.get("x-ratelimit-reset")) * 1000;
+      const e = new Error("лимит GitHub API (60 запросов/час)");
+      e.rate = true;
+      e.reset = Number.isFinite(reset) ? reset : 0;
+      throw e;
+    }
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    return await res.json();
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+function assetIsApk(name) { return /\.apk$/i.test(name); }
+function assetIsIosLike(name) { return /\.(ipa|dmg|zip)$/i.test(name) && !/\.(apk)$/i.test(name); }
+
+function socKeyOf(name) {
+  const m = /(sm\d{4}|tensor_g\d|arm64-v8a|x86_64|armv7|universal)/i.exec(name);
+  if (!m) return "";
+  const v = m[1].toLowerCase();
+  if (v === "arm64-v8a") return "arm64";
+  return v;
+}
+
+/* загрузка данных по всем оболочкам с кэшем на 6 часов */
+async function loadShells(force) {
+  const catalog = shellCatalog();
+  state.shells = catalog;
+  el.cntApps.textContent = String(catalog.length);
+
+  const cache = loadShellCache();
+  if (!force && cache && Date.now() - cache.ts < CFG.SHELLS_TTL) {
+    state.shellsData = cache.data || {};
+    state.shellsErr = {};
+    const missing = catalog.filter(c => !state.shellsData[c.repo]);
+    if (missing.length) {
+      const { rateLimited } = await fetchShellData(missing, state.shellsData);
+      if (!rateLimited) saveShellCache(state.shellsData);
+    }
+    return;
+  }
+
+  state.shellsData = {};
+  state.shellsErr = {};
+  el.appsStatus.textContent = "Хочу данные с GitHub…";
+  const { rateLimited } = await fetchShellData(catalog, {});
+  saveShellCache(state.shellsData);
+  if (rateLimited) updateAppsStatus();
+}
+
+async function fetchShellData(list, seed) {
+  for (const k of Object.keys(seed || {})) state.shellsData[k] = seed[k];
+  // один запрос на репозиторий: релиз (звёзды берём из статики/кэша) — экономим лимит GitHub
+  const tasks = list.map(async (sh) => {
+    try {
+      const rel = await ghJSON(GH_API + "/repos/" + sh.repo + "/releases?per_page=1");
+      const r = Array.isArray(rel) && rel.length ? rel[0] : null;
+      state.shellsData[sh.repo] = {
+        tag: r ? r.tag_name : "",
+        date: r ? (r.published_at || "").slice(0, 10) : "",
+        assets: r ? (r.assets || []).map(a => ({ name: a.name, size: a.size, url: a.browser_download_url })) : [],
+        live: true
+      };
+      delete state.shellsErr[sh.repo];
+    } catch (e) {
+      if (e && e.rate) {
+        state.shellsRateUntil = e.reset || 0;
+        throw e;
+      }
+      state.shellsErr[sh.repo] = e && e.message ? e.message : "ошибка";
+    }
+  });
+  const res = await Promise.allSettled(tasks);
+  const rateLimited = res.some(r => r.status === "rejected" && r.reason && r.reason.rate);
+  return { rateLimited };
+}
+
+function appAssets(repo) {
+  const d = state.shellsData[repo];
+  return d && Array.isArray(d.assets) ? d.assets : [];
+}
+
+function apkAssets(repo) {
+  return appAssets(repo).filter(a => assetIsApk(a.name));
+}
+
+/* какой APK предложить первым: под 8 Elite, иначе универсальный */
+function bestAsset(repo) {
+  const list = apkAssets(repo);
+  if (!list.length) return null;
+  const order = ["sm8750", "sm8850", "sm8650", "sm8550", "universal", "arm64", "tensor_g6", "tensor_g5", "x86_64", "armv7"];
+  for (const key of order) {
+    const hit = list.find(a => socKeyOf(a.name) === key);
+    if (hit) return hit;
+  }
+  return list[0];
+}
+
+function appMatches(sh) {
+  const f = state.appFilter;
+  if (f === "all") return true;
+  if (f === "android") return sh.plat === "android";
+  if (f === "ios") return sh.plat === "ios";
+  if (f === "apk") return apkAssets(sh.repo).length > 0;
+  return (sh.fmts || []).indexOf(f) !== -1;
+}
+
+function appsVisible() {
+  const q = state.appQuery.trim().toLowerCase();
+  return state.shells.filter(sh => {
+    if (!appMatches(sh)) return false;
+    if (!q) return true;
+    return (sh.repo + " " + sh.name + " " + sh.by + " " + (sh.note || "")).toLowerCase().includes(q);
+  }).sort((a, b) => {
+    const sa = state.shellsData[a.repo] ? (state.shellsData[a.repo].stars || 0) : 0;
+    const sb = state.shellsData[b.repo] ? (state.shellsData[b.repo].stars || 0) : 0;
+    if (a.pick !== b.pick) return a.pick ? -1 : 1;
+    return sb - sa;
+  });
+}
+
+const DLICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5v11"/><path d="m7.5 10.5 4.5 4.5 4.5-4.5"/><path d="M4.5 20h15"/></svg>';
+
+const GH_ICON = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.5 2 2 6.6 2 12.2c0 4.5 2.9 8.3 6.8 9.7.5.1.7-.2.7-.5v-1.9c-2.8.6-3.4-1.2-3.4-1.2-.4-1.1-1.1-1.4-1.1-1.4-.9-.6.1-.6.1-.6 1 .1 1.5 1 1.5 1 .9 1.6 2.4 1.1 3 .9.1-.7.4-1.1.7-1.4-2.2-.2-4.6-1.1-4.6-5 0-1.1.4-2 1-2.7-.1-.3-.4-1.3.1-2.7 0 0 .8-.3 2.7 1a9.3 9.3 0 0 1 5 0c1.9-1.3 2.7-1 2.7-1 .5 1.4.2 2.4.1 2.7.6.7 1 1.6 1 2.7 0 3.9-2.3 4.8-4.6 5 .4.3.7 1 .7 2v2.9c0 .3.2.6.7.5A10.1 10.1 0 0 0 22 12.2C22 6.6 17.5 2 12 2Z"/></svg>';
+
+function appCardHTML(sh) {
+  const d = state.shellsData[sh.repo] || {};
+  const err = state.shellsErr[sh.repo];
+  const apks = apkAssets(sh.repo);
+  const best = bestAsset(sh.repo);
+  const platLabel = sh.plat === "ios" ? "iOS" : sh.plat === "lib" ? "библиотека" : "Android";
+  const platCls = sh.plat === "ios" ? "plat ios" : sh.plat === "lib" ? "plat lib" : (apks.length ? "plat apk" : "plat");
+  const sizeMb = best ? Math.round(best.size / 1048576) : 0;
+  const socKey = best ? socKeyOf(best.name) : "";
+  const socHint = socKey && SOC_HINTS[socKey] ? SOC_HINTS[socKey] : "";
+
+  const starsVal = d.stars != null ? d.stars : sh.stars0;
+  const metaBits = [];
+  if (starsVal != null) metaBits.push('<span class="ico">★ ' + fmtNum(starsVal) + "</span>");
+  if (d.tag) metaBits.push("<span>релиз " + esc(String(d.tag)) + (d.date ? " · " + esc(d.date) : "") + "</span>");
+  else if (!err) metaBits.push("<span>релизов нет</span>");
+  if (apks.length) metaBits.push("<span>" + apks.length + " APK" + (sizeMb ? " · лучший " + sizeMb + " МБ" : "") + "</span>");
+  if (err) metaBits.push('<span style="color:#ffb08c">' + esc(err) + "</span>");
+
+  const fmts = (sh.fmts || []).map(f =>
+    '<span class="fmt">' + esc(f === "litert" ? "LiteRT" : f === "gguf" ? "GGUF" : f.toUpperCase()) + "</span>").join("");
+
+  const getBtn = apks.length
+    ? '<button class="get" type="button" data-app-get="' + esc(sh.repo) + '">' + DLICON +
+      '<span>Скачать' + (sizeMb ? ' <span class="sz">· ' + sizeMb + " МБ</span>" : "") + "</span></button>"
+    : '<button class="get" type="button" data-none="1" data-app-get="' + esc(sh.repo) + '">Список файлов</button>';
+
+  return (
+    '<div class="app-card' + (sh.pick ? " pick" : "") + '">' +
+      '<div class="app-head">' +
+        '<h3 class="app-name">' + esc(sh.name) + "</h3>" +
+        '<span class="' + platCls + '">' + esc(platLabel) + "</span>" +
+        '<span class="app-by">' + esc(sh.by) + "</span>" +
+      "</div>" +
+      '<p class="app-note">' + esc(sh.note || d.desc || "") + "</p>" +
+      (fmts ? '<div class="formats">' + fmts + "</div>" : "") +
+      '<div class="app-meta">' + metaBits.join("") + "</div>" +
+      '<div class="app-actions">' +
+        getBtn +
+        '<a class="gh" href="' + esc("https://github.com/" + sh.repo) + '" target="_blank" rel="noopener noreferrer">' + GH_ICON + " GitHub</a>" +
+      "</div>" +
+      (socHint && apks.length ? '<div class="app-meta"><span>лучший файл: ' + esc(best.name) + " — " + esc(socHint) + "</span></div>" : "") +
+    "</div>"
+  );
+}
+
+function renderApps() {
+  const list = appsVisible();
+  if (!state.shells.length) {
+    el.list.innerHTML = '<div class="state"><h3>Загружаю каталог…</h3></div>';
+    return;
+  }
+  if (!list.length) {
+    el.list.innerHTML = '<div class="state">' + ICON.search + "<h3>Ничего не нашлось</h3>" +
+      "<p>Сбрось фильтр оболочек или добавь свой репозиторий.</p></div>";
+    el.extra.innerHTML = "";
+    return;
+  }
+  el.list.innerHTML = list.map(appCardHTML).join("");
+  el.extra.innerHTML = "";
+  updateAppsStatus(list.length);
+}
+
+function updateAppsStatus(count) {
+  const n = count != null ? count : appsVisible().length;
+  if (state.shellsRateUntil && state.shellsRateUntil > Date.now()) {
+    const when = new Date(state.shellsRateUntil).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
+    const live = Object.keys(state.shellsData).length;
+    el.appsStatus.textContent = n + " оболочек · " +
+      (live ? "данные из кэша" : "GitHub-лимит 60/ч") + " · обновится в " + when;
+  } else {
+    el.appsStatus.textContent = n + " оболочек · данные с GitHub · кэш 6 ч";
+  }
+}
+
+/* ---------- шторка с файлами релиза ---------- */
+function openRelease(repo) {
+  const sh = state.shells.find(x => x.repo === repo) || { repo: repo, name: repo };
+  const d = state.shellsData[repo] || {};
+  const best = bestAsset(repo);
+  const rank = (a) => (best && a.name === best.name ? 0 : assetIsApk(a.name) ? 1 : 2);
+  const assets = (d.assets || []).slice().sort((a, b) => {
+    const ra = rank(a), rb = rank(b);
+    if (ra !== rb) return ra - rb;
+    if (ra === 1) return b.size - a.size;
+    return a.name.localeCompare(b.name);
+  });
+
+  state.relRepo = repo;
+  el.relOverlay.hidden = false;
+  document.body.style.overflow = "hidden";
+  el.relTitle.textContent = sh.name || repo;
+  el.relSub.textContent = [sh.by, d.tag ? "релиз " + d.tag : "", d.date || ""].filter(Boolean).join(" · ") ||
+    (state.shellsErr[repo] || "нет данных о релизах");
+  el.relPage.href = "https://github.com/" + repo + "/releases";
+
+  if (!assets.length) {
+    el.relHint.hidden = true;
+    const hasData = !!state.shellsData[repo];
+    const limited = !hasData && state.shellsRateUntil && state.shellsRateUntil > Date.now();
+    const why = sh.plat === "ios"
+      ? "iOS-приложения ставятся через App Store или сборкой из Xcode — открой GitHub."
+      : (limited
+          ? "GitHub ограничил запросы (60/час без токена), поэтому список файлов не получен. Открой страницу релизов — там те же APK."
+          : (state.shellsErr[repo] || "APK не приложен к релизу — смотри страницу релизов."));
+    el.relList.innerHTML = '<div class="state" style="margin-top:0"><h3>' +
+      (limited ? "Нужен список на GitHub" : "В релизах нет файлов") + "</h3><p>" + esc(why) + "</p></div>";
+    return;
+  }
+
+  el.relHint.hidden = false;
+  el.relHint.innerHTML = best
+    ? "<b>★ " + esc(best.name) + "</b> (" + fmtBytes(best.size) + ") — лучший файл под твой Snapdragon 8 Elite. " +
+      "Android попросит разрешить установку из этого источника."
+    : "Выбери файл под своё устройство.";
+
+  el.relList.innerHTML = assets.map(a => {
+    const key = socKeyOf(a.name);
+    const hint = SOC_HINTS[key] || "";
+    const isBest = best && a.name === best.name;
+    return (
+      '<div class="f-row' + (isBest ? " rec" : "") + '">' +
+        '<a class="f-main" href="' + esc(a.url) + '" target="_blank" rel="noopener noreferrer">' +
+          '<span class="f-txt">' +
+            '<span class="f-name">' + esc(a.name) + "</span>" +
+            '<span class="f-meta">' +
+              '<span class="f-quant' + (isBest ? " rec" : "") + '">' + esc(isBest ? "★ " : "") + esc(a.name.split(".").pop().toUpperCase()) + "</span>" +
+              (hint ? "<span>" + esc(hint) + "</span>" : "") +
+              '<span class="f-size">' + fmtBytes(a.size) + "</span>" +
+            "</span>" +
+          "</span>" +
+          '<span class="f-go"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5v11"/><path d="m7.5 10.5 4.5 4.5 4.5-4.5"/><path d="M4.5 20h15"/></svg></span>' +
+        "</a>" +
+        '<button class="f-copy" type="button" data-copy="' + esc(a.url) + '" aria-label="Скопировать ссылку">' +
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2.5"/><path d="M15 5.5A2.5 2.5 0 0 0 12.5 3H5.5A2.5 2.5 0 0 0 3 5.5v7A2.5 2.5 0 0 0 5.5 15"/></svg>' +
+        "</button>" +
+      "</div>"
+    );
+  }).join("");
+}
+
+function closeRelease() {
+  el.relOverlay.hidden = true;
+  syncBodyScroll();
+}
+
+/* ---------- переключение вида ---------- */
+function setView(v) {
+  state.view = v;
+  el.viewTabs.querySelectorAll("[data-view]").forEach(b => {
+    b.setAttribute("aria-pressed", String(b.dataset.view === v));
+  });
+  el.modelsBar.hidden = v !== "models";
+  el.appsBar.hidden = v !== "apps";
+  if (v === "apps") {
+    el.cntApps.textContent = String(shellCatalog().length);
+    renderApps();
+    if (!Object.keys(state.shellsData).length) {
+      loadShells(false).then(() => renderApps()).catch(() => renderApps());
+    }
+  } else {
+    render();
+    renderExtra();
+  }
+}
+
+function addMyShell(raw) {
+  const repo = String(raw || "").trim().replace(/^https?:\/\/github\.com\//i, "").replace(/\/+$/, "");
+  if (!/^[\w.-]+\/[\w.-]+$/.test(repo)) { toast("Нужен формат owner/repo"); return; }
+  const mine = loadMyShells();
+  if (mine.some(r => r.toLowerCase() === repo.toLowerCase()) || SHELLS.some(s2 => s2.repo.toLowerCase() === repo.toLowerCase())) {
+    toast("Такая оболочка уже есть");
+    return;
+  }
+  mine.unshift(repo);
+  saveMyShells(mine);
+  el.addRepo.value = "";
+  state.shells = shellCatalog();
+  el.cntApps.textContent = String(state.shells.length);
+  renderApps();
+  el.appsStatus.textContent = "Тяну данные нового репозитория…";
+  fetchShellData([state.shells.find(x => x.repo === repo) || { repo: repo }], state.shellsData)
+    .then(() => { saveShellCache(state.shellsData); renderApps(); toast("Добавил " + repo); })
+    .catch(() => renderApps());
+}
+
+/* =========================================================
+   СОБЫТИЯ
+   ========================================================= */
+el.btnRefresh.addEventListener("click", () => run(true));
+
+// кнопка «Скачать» на карточке (карточка — ссылка, поэтому гасим переход)
+el.list.addEventListener("click", e => {
+  const btn = e.target.closest("[data-dl]");
+  if (!btn) return;
+  e.preventDefault();
+  e.stopPropagation();
+  openDownload(btn.dataset.dl);
+});
+
+el.dlClose.addEventListener("click", closeDownload);
+
+/* ---------- поделиться ---------- */
+el.list.addEventListener("click", e => {
+  const fav = e.target.closest("[data-fav]");
+  if (fav) {
+    e.preventDefault();
+    e.stopPropagation();
+    toggleFavorite(fav.dataset.fav);
+    return;
+  }
+  const btn = e.target.closest("[data-share]");
+  if (!btn) return;
+  e.preventDefault();
+  e.stopPropagation();
+  openShare(btn.dataset.share);
+});
+
+el.shClose.addEventListener("click", closeShare);
+el.shOverlay.addEventListener("click", e => {
+  if (e.target === el.shOverlay) return closeShare();
+  const tab = e.target.closest("[data-shmode]");
+  if (tab) {
+    state.shareMode = tab.dataset.shmode;
+    renderShareSheet();
+  }
+});
+el.shNative.addEventListener("click", doNativeShare);
+el.modalShare.addEventListener("click", doShareList);
+el.shCopy.addEventListener("click", () => {
+  const it = state.items.find(i => i.id === state.shareId);
+  if (!it) return;
+  copyText(shareText(it, state.shareMode), "Отчёт скопирован в буфер");
+});
+el.shTelegram.addEventListener("click", () => {
+  const it = state.items.find(i => i.id === state.shareId);
+  if (!it) return;
+  window.open(shareTelegramURL(shareText(it, state.shareMode), it.url), "_blank", "noopener");
+});
+el.dlOverlay.addEventListener("click", e => {
+  if (e.target === el.dlOverlay) return closeDownload();
+  const cp = e.target.closest("[data-copy]");
+  if (cp) {
+    e.preventDefault();
+    e.stopPropagation();
+    copyText(cp.dataset.copy);
+  }
+});
+el.saveApp.addEventListener("click", saveAppFile);
+
+el.btnNew.addEventListener("click", () => {
+  clearFilters();
+  state.filters.add(state.newItems.length ? "new" : "updated");
+  syncChips();
+  render();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+});
+
+el.chips.addEventListener("click", e => {
+  const chip = e.target.closest(".chip");
+  if (!chip) return;
+  if (chip.id === "sizeChip") return openSizeFilter();
+  if (chip.id === "sortChip") return openSort();
+  if (chip.id === "topChip") return;
+  const f = chip.dataset.filter;
+  if (!f) return;
+  if (f === "all") clearFilters();
+  else toggleFilter(f);
+  syncChips();
+  render();
+  // если после включения фильтра пусто — подскажем, что можно сделать
+  if (!visibleItems().length && state.filters.size) {
+    const strict = settings.strictAuthors;
+    toast(strict ? "У твоих авторов по этим тегам пусто — попробуй выключить строгий список" : "Пусто по этим фильтрам");
+  }
+});
+
+function syncChips() {
+  el.chips.querySelectorAll(".chip[data-filter]").forEach(c => {
+    const f = c.dataset.filter;
+    const on = f === "all" ? state.filters.size === 0 : state.filters.has(f);
+    c.setAttribute("aria-pressed", String(on));
+  });
+  const n = state.filters.size;
+  el.chips.querySelectorAll('.chip[data-filter="all"]').forEach(c => {
+    c.textContent = n > 1 ? "Все (" + n + ")" : "Все";
+  });
+}
+
+/* ---------- фильтр размера ---------- */
+el.sizeClose.addEventListener("click", closeSizeFilter);
+el.sizeDone.addEventListener("click", closeSizeFilter);
+el.sizeOverlay.addEventListener("click", e => {
+  if (e.target === el.sizeOverlay) return closeSizeFilter();
+  const opt = e.target.closest("[data-sz]");
+  if (opt) return toggleSizeFilter(opt.dataset.sz);
+  const pre = e.target.closest("[data-sizefilter]");
+  if (pre) return sizeFilterPreset(pre.dataset.sizefilter);
+});
+
+/* ---------- переключение «Модели / Оболочки» ---------- */
+el.viewTabs.addEventListener("click", e => {
+  const b = e.target.closest("[data-view]");
+  if (b) setView(b.dataset.view);
+});
+
+/* ---------- оболочки: поиск, чипы, добавление ---------- */
+el.appQ.addEventListener("input", () => {
+  state.appQuery = el.appQ.value;
+  clearTimeout(el.appQ._t);
+  el.appQ._t = setTimeout(renderApps, 120);
+});
+el.appChips.addEventListener("click", e => {
+  const chip = e.target.closest(".chip");
+  if (!chip || !chip.dataset.appfilter) return;
+  state.appFilter = chip.dataset.appfilter;
+  el.appChips.querySelectorAll(".chip").forEach(c =>
+    c.setAttribute("aria-pressed", String(c.dataset.appfilter === state.appFilter)));
+  renderApps();
+});
+el.addRepoBtn.addEventListener("click", () => addMyShell(el.addRepo.value));
+el.addRepo.addEventListener("keydown", e => { if (e.key === "Enter") addMyShell(el.addRepo.value); });
+
+el.list.addEventListener("click", e => {
+  const btn = e.target.closest("[data-app-get]");
+  if (!btn) return;
+  e.preventDefault();
+  openRelease(btn.dataset.appGet);
+});
+el.relClose.addEventListener("click", closeRelease);
+el.relOverlay.addEventListener("click", e => {
+  if (e.target === el.relOverlay) return closeRelease();
+  const cp = e.target.closest("[data-copy]");
+  if (cp) {
+    e.preventDefault();
+    e.stopPropagation();
+    copyText(cp.dataset.copy);
+  }
+});
+
+/* ---------- сортировка ---------- */
+el.topChip.addEventListener("click", () => {
+  setSort(state.sort === "top" ? "fresh" : "top");
+  if (state.sort === "top") window.scrollTo({ top: 0, behavior: "smooth" });
+});
+el.sortChip.addEventListener("click", openSort);
+el.sortClose.addEventListener("click", closeSort);
+el.sortDone.addEventListener("click", closeSort);
+el.sortOverlay.addEventListener("click", e => {
+  if (e.target === el.sortOverlay) return closeSort();
+  const o = e.target.closest("[data-sort]");
+  if (o) setSort(o.dataset.sort);
+});
+
+/* ---------- настройки ---------- */
+el.btnSettings.addEventListener("click", openSettings);
+el.setClose.addEventListener("click", closeSettings);
+el.setOverlay.addEventListener("click", e => {
+  if (e.target === el.setOverlay) return closeSettings();
+  const rmA = e.target.closest("[data-rm-author]");
+  if (rmA) return draftRemove("author", rmA.dataset.rmAuthor);
+  const rmK = e.target.closest("[data-rm-keyword]");
+  if (rmK) return draftRemove("keyword", rmK.dataset.rmKeyword);
+  const sz = e.target.closest("[data-size]");
+  if (sz) return draftToggleSize(sz.dataset.size);
+  const pre = e.target.closest("[data-preset]");
+  if (pre) return draftPreset(pre.dataset.preset);
+});
+el.addAuthorBtn.addEventListener("click", () => draftAdd("author", el.addAuthor.value, el.addAuthor));
+el.addKeywordBtn.addEventListener("click", () => draftAdd("keyword", el.addKeyword.value, el.addKeyword));
+el.addAuthor.addEventListener("keydown", e => { if (e.key === "Enter") draftAdd("author", el.addAuthor.value, el.addAuthor); });
+el.addKeyword.addEventListener("keydown", e => { if (e.key === "Enter") draftAdd("keyword", el.addKeyword.value, el.addKeyword); });
+el.setCheckUpdates.addEventListener("change", () => { state.draft.checkUpdates = el.setCheckUpdates.checked; });
+el.setVibrate.addEventListener("change", () => {
+  state.draft.vibrate = el.setVibrate.checked;
+  if (state.draft.vibrate) vibrate([25, 40, 25]);
+});
+el.setStrict.addEventListener("change", () => { state.draft.strictAuthors = el.setStrict.checked; });
+el.setOriginals.addEventListener("change", () => { state.draft.allowOriginals = el.setOriginals.checked; });
+el.setVibrateTest.addEventListener("click", () => {
+  const was = settings.vibrate;
+  settings.vibrate = true;
+  vibrate([45, 70, 45]);
+  settings.vibrate = was;
+  if (!("vibrate" in navigator)) toast("Этот браузер не умеет вибрировать");
+  else toast("Если не дрогнуло — проверь системный режим вибрации");
+});
+el.setApply.addEventListener("click", applySettings);
+el.setReset.addEventListener("click", resetSettings);
+el.setExport.addEventListener("click", exportSettings);
+el.setImport.addEventListener("click", () => el.setFile.click());
+el.setFile.addEventListener("change", () => {
+  const f = el.setFile.files && el.setFile.files[0];
+  importSettingsFile(f);
+  el.setFile.value = "";
+});
+
+let qTimer = null;
+el.q.addEventListener("input", () => {
+  state.query = el.q.value;
+  el.clearQ.hidden = !el.q.value;
+  clearTimeout(qTimer);
+  qTimer = setTimeout(render, 120);
+});
+
+el.clearQ.addEventListener("click", () => {
+  el.q.value = "";
+  state.query = "";
+  el.clearQ.hidden = true;
+  render();
+  el.q.focus();
+});
+
+el.modalOk.addEventListener("click", () => {
+  closeModal();
+  clearFilters();
+  state.filters.add(state.newItems.length ? "new" : "updated");
+  syncChips();
+  render();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+});
+
+el.modalClose.addEventListener("click", closeModal);
+el.overlay.addEventListener("click", e => { if (e.target === el.overlay) closeModal(); });
+document.addEventListener("keydown", e => {
+  if (e.key !== "Escape") return;
+  if (!el.relOverlay.hidden) closeRelease();
+  else if (!el.sortOverlay.hidden) closeSort();
+  else if (!el.shOverlay.hidden) closeShare();
+  else if (!el.sizeOverlay.hidden) closeSizeFilter();
+  else if (!el.setOverlay.hidden) closeSettings();
+  else if (!el.dlOverlay.hidden) closeDownload();
+  else if (!el.overlay.hidden) closeModal();
+});
+
+/* обновление раз в 10 минут — «держать руку на пульсе» */
+setInterval(() => {
+  if (document.visibilityState === "visible" && !state.loading) run(false);
+}, CFG.AUTO_REFRESH);
+
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible" && !state.loading) {
+    const lr = loadLastRun();
+    if (lr && Date.now() - lr > CFG.AUTO_REFRESH) run(false);
+  }
+});
+
+/* =========================================================
+   СТАРТ
+   ========================================================= */
+state.favorites = loadFavorites();
+state.shells = shellCatalog();
+el.cntApps.textContent = String(state.shells.length);
+syncChips();
+updateBadges();
+run(false);
+</script>
+</body>
+</html>
